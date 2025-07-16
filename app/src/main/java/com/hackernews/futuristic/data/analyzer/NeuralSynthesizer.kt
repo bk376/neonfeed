@@ -218,7 +218,7 @@ class NeuralSynthesizer @Inject constructor() {
         
         return BusinessOpportunity(
             title = selectedApp.title,
-            description = selectedApp.description,
+            description = selectedApp.title,
             marketPotential = selectedApp.marketPotential,
             revenueEstimate = selectedApp.revenueEstimate,
             viabilityScore = calculateViabilityScore(topics),

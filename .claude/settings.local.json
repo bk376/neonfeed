@@ -15,7 +15,9 @@
       "Bash(export PATH=$JAVA_HOME/bin:$PATH)",
       "Bash(adb:*)",
       "Bash(grep:*)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ],
     "deny": []
   }

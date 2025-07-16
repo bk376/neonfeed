@@ -314,7 +314,7 @@ fun StoriesScreenFixed(
                             } else {
                                 EnhancedStoryCard(
                                     story = story,
-                                    onClick = { 
+                                    onStoryClick = { 
                                         onStoryClick(story)
                                         viewModel.onStoryRead(story, readingTime = 180L, completed = true)
                                     },
@@ -347,6 +347,7 @@ fun StoriesScreenFixed(
                             }
                         }
                     }
+                    }
                     
                     // Floating scroll-to-top button
                     androidx.compose.animation.AnimatedVisibility(
@@ -377,7 +378,7 @@ fun StoriesScreenFixed(
 }
 
 @Composable
-private fun FixedButton(
+fun FixedButton(
     text: String,
     isSelected: Boolean,
     onClick: () -> Unit,
@@ -402,7 +403,7 @@ private fun FixedButton(
 }
 
 @Composable
-private fun EnhancedStoryCard(
+fun EnhancedStoryCard(
     story: Story,
     onStoryClick: () -> Unit,
     onUrlClick: ((String, String) -> Unit)? = null
@@ -480,7 +481,7 @@ private fun EnhancedStoryCard(
                 
                 // Date
                 Text(
-                    text = formatTimeAgo(story.time),
+                    text = formatTimeAgoFixed(story.time),
                     color = NeonYellow,
                     fontSize = 12.sp,
                     fontFamily = MonospaceFont,
@@ -543,7 +544,7 @@ private fun EnhancedStoryCard(
     }
 }
 
-private fun formatTimeAgo(timestamp: Long): String {
+fun formatTimeAgoFixed(timestamp: Long): String {
     val now = System.currentTimeMillis() / 1000
     val diff = now - timestamp
     
@@ -559,7 +560,7 @@ private fun formatTimeAgo(timestamp: Long): String {
 }
 
 @Composable
-private fun AnalysisCard(
+fun AnalysisCard(
     analysis: com.hackernews.futuristic.data.model.StoryAnalysis
 ) {
     Card(
@@ -632,7 +633,7 @@ private fun AnalysisCard(
 }
 
 @Composable
-private fun AnalysisItem(
+fun AnalysisItem(
     label: String,
     value: String,
     color: Color

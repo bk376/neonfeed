@@ -1,11 +1,14 @@
 package com.hackernews.futuristic;
 
+import androidx.hilt.work.HiltWrapper_WorkerFactoryModule;
+import com.hackernews.futuristic.di.DatabaseModule;
 import com.hackernews.futuristic.di.NetworkModule;
 import com.hackernews.futuristic.ui.detail.StoryDetailViewModel_HiltModules;
 import com.hackernews.futuristic.ui.search.QuantumSearchViewModel_HiltModules;
 import com.hackernews.futuristic.ui.search.SearchViewModel_HiltModules;
 import com.hackernews.futuristic.ui.settings.SettingsViewModel_HiltModules;
 import com.hackernews.futuristic.ui.stories.StoriesViewModel_HiltModules;
+import com.hackernews.futuristic.ui.summary.DailySummaryViewModel_HiltModules;
 import dagger.Binds;
 import dagger.Component;
 import dagger.Module;
@@ -130,7 +133,9 @@ public final class NeonFeedApplication_HiltComponents {
   @Component(
       modules = {
           ApplicationContextModule.class,
+          DatabaseModule.class,
           HiltWrapper_FragmentGetContextFix_FragmentGetContextFixModule.class,
+          HiltWrapper_WorkerFactoryModule.class,
           ActivityRetainedCBuilderModule.class,
           ServiceCBuilderModule.class,
           NetworkModule.class
@@ -156,6 +161,7 @@ public final class NeonFeedApplication_HiltComponents {
 
   @Subcomponent(
       modules = {
+          DailySummaryViewModel_HiltModules.KeyModule.class,
           HiltWrapper_ActivityRetainedComponentManager_LifecycleModule.class,
           ActivityCBuilderModule.class,
           ViewModelCBuilderModule.class,
@@ -199,6 +205,7 @@ public final class NeonFeedApplication_HiltComponents {
 
   @Subcomponent(
       modules = {
+          DailySummaryViewModel_HiltModules.BindsModule.class,
           HiltWrapper_HiltViewModelFactory_ViewModelModule.class,
           QuantumSearchViewModel_HiltModules.BindsModule.class,
           SearchViewModel_HiltModules.BindsModule.class,

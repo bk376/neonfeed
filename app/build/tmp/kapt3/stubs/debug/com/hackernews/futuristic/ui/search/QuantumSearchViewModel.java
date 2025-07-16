@@ -1,6 +1,6 @@
 package com.hackernews.futuristic.ui.search;
 
-@kotlin.Metadata(mv = {1, 9, 0}, k = 1, xi = 48, d1 = {"\u0000Z\n\u0002\u0018\u0002\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0002\b\u0002\n\u0002\u0018\u0002\n\u0002\u0010\u0007\n\u0000\n\u0002\u0018\u0002\n\u0000\n\u0002\u0010\u000e\n\u0000\n\u0002\u0010 \n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0002\b\r\n\u0002\u0010\u0002\n\u0002\b\u0012\b\u0007\u0018\u00002\u00020\u0001B\u0017\b\u0007\u0012\u0006\u0010\u0002\u001a\u00020\u0003\u0012\u0006\u0010\u0004\u001a\u00020\u0005\u00a2\u0006\u0002\u0010\u0006J\u0006\u0010%\u001a\u00020&J\u000e\u0010\'\u001a\b\u0012\u0004\u0012\u00020\u00160\u000fH\u0002J\u0006\u0010(\u001a\u00020&J\u0016\u0010)\u001a\b\u0012\u0004\u0012\u00020\u00100\u000f2\u0006\u0010*\u001a\u00020\rH\u0002J\u0016\u0010+\u001a\b\u0012\u0004\u0012\u00020\u00100\u000f2\u0006\u0010*\u001a\u00020\rH\u0002J\b\u0010,\u001a\u00020&H\u0002J\u0010\u0010-\u001a\u00020&2\u0006\u0010*\u001a\u00020\rH\u0002J\u0016\u0010.\u001a\b\u0012\u0004\u0012\u00020\u00100\u000f2\u0006\u0010*\u001a\u00020\rH\u0002J\b\u0010/\u001a\u00020&H\u0002J\u0006\u00100\u001a\u00020&J\u000e\u00101\u001a\u00020&2\u0006\u00102\u001a\u00020\tJ\u000e\u00103\u001a\u00020&2\u0006\u00104\u001a\u00020\u000bJ\u000e\u00105\u001a\u00020&2\u0006\u00106\u001a\u00020\u0012J\u000e\u00107\u001a\u00020&2\u0006\u0010*\u001a\u00020\rR\u0014\u0010\u0007\u001a\b\u0012\u0004\u0012\u00020\t0\bX\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u0014\u0010\n\u001a\b\u0012\u0004\u0012\u00020\u000b0\bX\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u0014\u0010\f\u001a\b\u0012\u0004\u0012\u00020\r0\bX\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u001a\u0010\u000e\u001a\u000e\u0012\n\u0012\b\u0012\u0004\u0012\u00020\u00100\u000f0\bX\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u001a\u0010\u0011\u001a\u000e\u0012\n\u0012\b\u0012\u0004\u0012\u00020\u00120\u000f0\bX\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u0014\u0010\u0013\u001a\b\u0012\u0004\u0012\u00020\u00140\bX\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u0014\u0010\u0015\u001a\b\u0012\u0004\u0012\u00020\u00160\u000fX\u0082\u000e\u00a2\u0006\u0002\n\u0000R\u0017\u0010\u0017\u001a\b\u0012\u0004\u0012\u00020\t0\u0018\u00a2\u0006\b\n\u0000\u001a\u0004\b\u0019\u0010\u001aR\u000e\u0010\u0004\u001a\u00020\u0005X\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0002\u001a\u00020\u0003X\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u0017\u0010\u001b\u001a\b\u0012\u0004\u0012\u00020\u000b0\u0018\u00a2\u0006\b\n\u0000\u001a\u0004\b\u001c\u0010\u001aR\u0017\u0010\u001d\u001a\b\u0012\u0004\u0012\u00020\r0\u0018\u00a2\u0006\b\n\u0000\u001a\u0004\b\u001e\u0010\u001aR\u001d\u0010\u001f\u001a\u000e\u0012\n\u0012\b\u0012\u0004\u0012\u00020\u00100\u000f0\u0018\u00a2\u0006\b\n\u0000\u001a\u0004\b \u0010\u001aR\u001d\u0010!\u001a\u000e\u0012\n\u0012\b\u0012\u0004\u0012\u00020\u00120\u000f0\u0018\u00a2\u0006\b\n\u0000\u001a\u0004\b\"\u0010\u001aR\u0017\u0010#\u001a\b\u0012\u0004\u0012\u00020\u00140\u0018\u00a2\u0006\b\n\u0000\u001a\u0004\b$\u0010\u001a\u00a8\u00068"}, d2 = {"Lcom/hackernews/futuristic/ui/search/QuantumSearchViewModel;", "Landroidx/lifecycle/ViewModel;", "repository", "Lcom/hackernews/futuristic/data/repository/HackerNewsRepository;", "quantumSearchEngine", "Lcom/hackernews/futuristic/data/analyzer/QuantumSearchEngine;", "(Lcom/hackernews/futuristic/data/repository/HackerNewsRepository;Lcom/hackernews/futuristic/data/analyzer/QuantumSearchEngine;)V", "_probabilityThreshold", "Lkotlinx/coroutines/flow/MutableStateFlow;", "", "_searchMode", "Lcom/hackernews/futuristic/data/model/SearchMode;", "_searchQuery", "", "_searchSuggestions", "", "Lcom/hackernews/futuristic/data/model/SearchSuggestion;", "_selectedDimensions", "Lcom/hackernews/futuristic/data/model/SearchDimension;", "_uiState", "Lcom/hackernews/futuristic/ui/search/QuantumSearchUiState;", "allStories", "Lcom/hackernews/futuristic/data/model/Story;", "probabilityThreshold", "Lkotlinx/coroutines/flow/StateFlow;", "getProbabilityThreshold", "()Lkotlinx/coroutines/flow/StateFlow;", "searchMode", "getSearchMode", "searchQuery", "getSearchQuery", "searchSuggestions", "getSearchSuggestions", "selectedDimensions", "getSelectedDimensions", "uiState", "getUiState", "clearSearch", "", "createMockStories", "executeSearch", "generateAutoCompleteSuggestions", "query", "generateCrossDimensionalSuggestions", "generateInitialSuggestions", "generateSearchSuggestions", "generateSemanticExpansions", "loadInitialData", "retrySearch", "setProbabilityThreshold", "threshold", "setSearchMode", "mode", "toggleDimension", "dimension", "updateSearchQuery", "app_debug"})
+@kotlin.Metadata(mv = {1, 9, 0}, k = 1, xi = 48, d1 = {"\u0000f\n\u0002\u0018\u0002\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0002\b\u0002\n\u0002\u0018\u0002\n\u0002\u0010\u000b\n\u0000\n\u0002\u0010\u0007\n\u0000\n\u0002\u0018\u0002\n\u0000\n\u0002\u0010\u000e\n\u0000\n\u0002\u0010 \n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0002\b\u0011\n\u0002\u0010\u0002\n\u0000\n\u0002\u0018\u0002\n\u0002\b\u0014\b\u0007\u0018\u00002\u00020\u0001B\u0017\b\u0007\u0012\u0006\u0010\u0002\u001a\u00020\u0003\u0012\u0006\u0010\u0004\u001a\u00020\u0005\u00a2\u0006\u0002\u0010\u0006J\u0018\u0010(\u001a\u00020\u000b2\u0006\u0010)\u001a\u00020\u00182\u0006\u0010*\u001a\u00020\u000fH\u0002J\u0006\u0010+\u001a\u00020,J\u000e\u0010-\u001a\u00020.H\u0082@\u00a2\u0006\u0002\u0010/J\u0010\u00100\u001a\u00020.2\u0006\u0010*\u001a\u00020\u000fH\u0002J\u0006\u00101\u001a\u00020,J\u0016\u00102\u001a\b\u0012\u0004\u0012\u00020\u00120\u00112\u0006\u0010*\u001a\u00020\u000fH\u0002J\u0016\u00103\u001a\b\u0012\u0004\u0012\u00020\u00120\u00112\u0006\u0010*\u001a\u00020\u000fH\u0002J\b\u00104\u001a\u00020,H\u0002J\u0010\u00105\u001a\u00020,2\u0006\u0010*\u001a\u00020\u000fH\u0002J\u0016\u00106\u001a\b\u0012\u0004\u0012\u00020\u00120\u00112\u0006\u0010*\u001a\u00020\u000fH\u0002J\u0016\u00107\u001a\b\u0012\u0004\u0012\u00020\u000f0\u00112\u0006\u0010*\u001a\u00020\u000fH\u0002J\b\u00108\u001a\u00020,H\u0002J\u0006\u00109\u001a\u00020,J\u000e\u0010:\u001a\u00020,2\u0006\u0010;\u001a\u00020\u000bJ\u000e\u0010<\u001a\u00020,2\u0006\u0010=\u001a\u00020\rJ\u000e\u0010>\u001a\u00020,2\u0006\u0010?\u001a\u00020\u0014J\u0006\u0010@\u001a\u00020,J\u000e\u0010A\u001a\u00020,2\u0006\u0010*\u001a\u00020\u000fR\u0014\u0010\u0007\u001a\b\u0012\u0004\u0012\u00020\t0\bX\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u0014\u0010\n\u001a\b\u0012\u0004\u0012\u00020\u000b0\bX\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u0014\u0010\f\u001a\b\u0012\u0004\u0012\u00020\r0\bX\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u0014\u0010\u000e\u001a\b\u0012\u0004\u0012\u00020\u000f0\bX\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u001a\u0010\u0010\u001a\u000e\u0012\n\u0012\b\u0012\u0004\u0012\u00020\u00120\u00110\bX\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u001a\u0010\u0013\u001a\u000e\u0012\n\u0012\b\u0012\u0004\u0012\u00020\u00140\u00110\bX\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u0014\u0010\u0015\u001a\b\u0012\u0004\u0012\u00020\u00160\bX\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u0014\u0010\u0017\u001a\b\u0012\u0004\u0012\u00020\u00180\u0011X\u0082\u000e\u00a2\u0006\u0002\n\u0000R\u0017\u0010\u0019\u001a\b\u0012\u0004\u0012\u00020\t0\u001a\u00a2\u0006\b\n\u0000\u001a\u0004\b\u0019\u0010\u001bR\u0017\u0010\u001c\u001a\b\u0012\u0004\u0012\u00020\u000b0\u001a\u00a2\u0006\b\n\u0000\u001a\u0004\b\u001d\u0010\u001bR\u000e\u0010\u0004\u001a\u00020\u0005X\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0002\u001a\u00020\u0003X\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u0017\u0010\u001e\u001a\b\u0012\u0004\u0012\u00020\r0\u001a\u00a2\u0006\b\n\u0000\u001a\u0004\b\u001f\u0010\u001bR\u0017\u0010 \u001a\b\u0012\u0004\u0012\u00020\u000f0\u001a\u00a2\u0006\b\n\u0000\u001a\u0004\b!\u0010\u001bR\u001d\u0010\"\u001a\u000e\u0012\n\u0012\b\u0012\u0004\u0012\u00020\u00120\u00110\u001a\u00a2\u0006\b\n\u0000\u001a\u0004\b#\u0010\u001bR\u001d\u0010$\u001a\u000e\u0012\n\u0012\b\u0012\u0004\u0012\u00020\u00140\u00110\u001a\u00a2\u0006\b\n\u0000\u001a\u0004\b%\u0010\u001bR\u0017\u0010&\u001a\b\u0012\u0004\u0012\u00020\u00160\u001a\u00a2\u0006\b\n\u0000\u001a\u0004\b\'\u0010\u001b\u00a8\u0006B"}, d2 = {"Lcom/hackernews/futuristic/ui/search/QuantumSearchViewModel;", "Landroidx/lifecycle/ViewModel;", "repository", "Lcom/hackernews/futuristic/data/repository/HackerNewsRepository;", "quantumSearchEngine", "Lcom/hackernews/futuristic/data/analyzer/QuantumSearchEngine;", "(Lcom/hackernews/futuristic/data/repository/HackerNewsRepository;Lcom/hackernews/futuristic/data/analyzer/QuantumSearchEngine;)V", "_isRegularMode", "Lkotlinx/coroutines/flow/MutableStateFlow;", "", "_probabilityThreshold", "", "_searchMode", "Lcom/hackernews/futuristic/data/model/SearchMode;", "_searchQuery", "", "_searchSuggestions", "", "Lcom/hackernews/futuristic/data/model/SearchSuggestion;", "_selectedDimensions", "Lcom/hackernews/futuristic/data/model/SearchDimension;", "_uiState", "Lcom/hackernews/futuristic/ui/search/QuantumSearchUiState;", "allStories", "Lcom/hackernews/futuristic/data/model/Story;", "isRegularMode", "Lkotlinx/coroutines/flow/StateFlow;", "()Lkotlinx/coroutines/flow/StateFlow;", "probabilityThreshold", "getProbabilityThreshold", "searchMode", "getSearchMode", "searchQuery", "getSearchQuery", "searchSuggestions", "getSearchSuggestions", "selectedDimensions", "getSelectedDimensions", "uiState", "getUiState", "calculateSimpleRelevance", "story", "query", "clearSearch", "", "executeQuantumSearch", "Lcom/hackernews/futuristic/data/model/QuantumSearchResult;", "(Lkotlin/coroutines/Continuation;)Ljava/lang/Object;", "executeRegularSearch", "executeSearch", "generateAutoCompleteSuggestions", "generateCrossDimensionalSuggestions", "generateInitialSuggestions", "generateSearchSuggestions", "generateSemanticExpansions", "generateSimpleRelatedQueries", "loadInitialData", "retrySearch", "setProbabilityThreshold", "threshold", "setSearchMode", "mode", "toggleDimension", "dimension", "toggleSearchMode", "updateSearchQuery", "app_debug"})
 @dagger.hilt.android.lifecycle.HiltViewModel()
 public final class QuantumSearchViewModel extends androidx.lifecycle.ViewModel {
     @org.jetbrains.annotations.NotNull()
@@ -31,6 +31,10 @@ public final class QuantumSearchViewModel extends androidx.lifecycle.ViewModel {
     private final kotlinx.coroutines.flow.MutableStateFlow<java.util.List<com.hackernews.futuristic.data.model.SearchSuggestion>> _searchSuggestions = null;
     @org.jetbrains.annotations.NotNull()
     private final kotlinx.coroutines.flow.StateFlow<java.util.List<com.hackernews.futuristic.data.model.SearchSuggestion>> searchSuggestions = null;
+    @org.jetbrains.annotations.NotNull()
+    private final kotlinx.coroutines.flow.MutableStateFlow<java.lang.Boolean> _isRegularMode = null;
+    @org.jetbrains.annotations.NotNull()
+    private final kotlinx.coroutines.flow.StateFlow<java.lang.Boolean> isRegularMode = null;
     @org.jetbrains.annotations.NotNull()
     private java.util.List<com.hackernews.futuristic.data.model.Story> allStories;
     
@@ -71,6 +75,11 @@ public final class QuantumSearchViewModel extends androidx.lifecycle.ViewModel {
         return null;
     }
     
+    @org.jetbrains.annotations.NotNull()
+    public final kotlinx.coroutines.flow.StateFlow<java.lang.Boolean> isRegularMode() {
+        return null;
+    }
+    
     private final void loadInitialData() {
     }
     
@@ -89,7 +98,26 @@ public final class QuantumSearchViewModel extends androidx.lifecycle.ViewModel {
     public final void setProbabilityThreshold(float threshold) {
     }
     
+    public final void toggleSearchMode() {
+    }
+    
     public final void executeSearch() {
+    }
+    
+    private final java.lang.Object executeQuantumSearch(kotlin.coroutines.Continuation<? super com.hackernews.futuristic.data.model.QuantumSearchResult> $completion) {
+        return null;
+    }
+    
+    private final com.hackernews.futuristic.data.model.QuantumSearchResult executeRegularSearch(java.lang.String query) {
+        return null;
+    }
+    
+    private final float calculateSimpleRelevance(com.hackernews.futuristic.data.model.Story story, java.lang.String query) {
+        return 0.0F;
+    }
+    
+    private final java.util.List<java.lang.String> generateSimpleRelatedQueries(java.lang.String query) {
+        return null;
     }
     
     private final void generateInitialSuggestions() {
@@ -114,9 +142,5 @@ public final class QuantumSearchViewModel extends androidx.lifecycle.ViewModel {
     }
     
     public final void retrySearch() {
-    }
-    
-    private final java.util.List<com.hackernews.futuristic.data.model.Story> createMockStories() {
-        return null;
     }
 }

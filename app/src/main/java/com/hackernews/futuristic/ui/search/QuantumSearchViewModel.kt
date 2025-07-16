@@ -148,7 +148,7 @@ class QuantumSearchViewModel @Inject constructor(
         }
     }
     
-    private fun executeQuantumSearch(): QuantumSearchResult {
+    private suspend fun executeQuantumSearch(): QuantumSearchResult {
         val quantumQuery = QuantumSearchQuery(
             query = _searchQuery.value,
             searchDimensions = _selectedDimensions.value,
@@ -178,34 +178,27 @@ class QuantumSearchViewModel @Inject constructor(
         )
         
         return QuantumSearchResult(
-            query = query,
-            results = sortedStories.map { story ->
-                QuantumSearchResultItem(
-                    story = story,
-                    relevanceScore = calculateSimpleRelevance(story, queryLower),
-                    dimensionalScores = emptyMap(),
-                    matchedDimensions = listOf(SearchDimension.TITLE, SearchDimension.CONTENT),
-                    probabilityScore = 1.0f,
-                    searchExplanation = "Matched keyword: $query"
-                )
-            },
-            totalResults = sortedStories.size,
-            searchMetrics = QuantumSearchMetrics(
-                queryComplexity = 0.1f,
-                searchTime = 50L,
-                dimensionalCoverage = 0.3f,
-                probabilityDistribution = mapOf("exact_match" to 1.0f),
+            stories = sortedStories,
+            searchMetrics = SearchMetrics(
+                totalResults = sortedStories.size,
+                searchAccuracy = 0.8f,
                 quantumCoherence = 0.5f,
-                searchEntropy = 0.2f
+                dimensionalCoverage = 0.6f,
+                temporalRelevance = 0.7f,
+                semanticDepth = 0.4f,
+                uncertaintyLevel = 0.2f,
+                searchComplexity = 1
             ),
             suggestions = emptyList(),
-            relatedQueries = generateSimpleRelatedQueries(query),
-            searchSpace = SearchSpace(
-                totalDocuments = allStories.size,
-                searchedDimensions = listOf(SearchDimension.TITLE, SearchDimension.CONTENT),
-                timeRange = TimeRange(null, null, RelativeTimeRange.ALL_TIME),
-                appliedFilters = emptyList()
-            )
+            searchPaths = emptyList(),
+            quantumState = QuantumState(
+                superpositionLevels = mapOf(),
+                entanglementMatrix = arrayOf(),
+                coherenceTime = System.currentTimeMillis(),
+                observationCount = 1,
+                quantumInterference = 0.1f
+            ),
+            executionTime = System.currentTimeMillis()
         )
     }
     

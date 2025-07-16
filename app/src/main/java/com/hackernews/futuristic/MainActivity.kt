@@ -13,7 +13,12 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import kotlinx.coroutines.launch
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -56,11 +61,12 @@ fun HackerNewsApp() {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
+    val scope = rememberCoroutineScope()
     
     // Scroll-to-top callbacks for each screen
-    var scrollToTopStories: (() -> Unit)? by remember { mutableStateOf(null) }
-    var scrollToTopSearch: (() -> Unit)? by remember { mutableStateOf(null) }
-    var scrollToTopSummary: (() -> Unit)? by remember { mutableStateOf(null) }
+    var scrollToTopStories: (suspend () -> Unit)? by remember { mutableStateOf(null) }
+    var scrollToTopSearch: (suspend () -> Unit)? by remember { mutableStateOf(null) }
+    var scrollToTopSummary: (suspend () -> Unit)? by remember { mutableStateOf(null) }
     
     val bottomNavItems = listOf(
         BottomNavItem("stories", "Stories", Icons.Default.Home),
@@ -86,10 +92,12 @@ fun HackerNewsApp() {
                                 
                                 if (isAlreadyOnDestination) {
                                     // Trigger scroll to top for the current screen
-                                    when (item.route) {
-                                        "stories" -> scrollToTopStories?.invoke()
-                                        "search" -> scrollToTopSearch?.invoke()
-                                        "summary" -> scrollToTopSummary?.invoke()
+                                    scope.launch {
+                                        when (item.route) {
+                                            "stories" -> scrollToTopStories?.invoke()
+                                            "search" -> scrollToTopSearch?.invoke()
+                                            "summary" -> scrollToTopSummary?.invoke()
+                                        }
                                     }
                                 } else {
                                     // Navigate to the destination
