@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">NeonFeed</string>
+    <string name="stories">Stories</string>
+    <string name="comments">Comments</string>
+    <string name="search">Search</string>
+    <string name="loading">Loading...</string>
+    <string name="error_loading">Error loading content</string>
+    <string name="retry">Retry</string>
+    <string name="points">points</string>
+    <string name="by">by</string>
+    <string name="ago">ago</string>
+    <string name="comment">comment</string>
+    <string name="comments_count">%d comments</string>
+</resources>
