@@ -10,6 +10,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -26,12 +27,14 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.hackernews.futuristic.ui.detail.SimpleStoryDetailScreen
-import com.hackernews.futuristic.ui.search.QuantumSearchScreen
+import com.hackernews.futuristic.ui.search.CrashProofSearchScreen
 import com.hackernews.futuristic.ui.stories.StoriesScreenFixed
 import com.hackernews.futuristic.ui.settings.SettingsScreen
 import com.hackernews.futuristic.ui.components.PredictiveFilteringDashboard
 import com.hackernews.futuristic.ui.browser.RetroWebViewScreen
 import com.hackernews.futuristic.ui.summary.DailySummaryScreen
+import com.hackernews.futuristic.ui.bookmarks.BookmarksScreen
+import com.hackernews.futuristic.ui.user.UserProfileScreen
 import com.hackernews.futuristic.data.model.*
 import com.hackernews.futuristic.ui.theme.HackerNewsFuturisticTheme
 import java.net.URLEncoder
@@ -71,6 +74,7 @@ fun HackerNewsApp() {
     val bottomNavItems = listOf(
         BottomNavItem("stories", "Stories", Icons.Default.Home),
         BottomNavItem("search", "Search", Icons.Default.Search),
+        BottomNavItem("bookmarks", "Bookmarks", Icons.Default.Bookmark),
         BottomNavItem("summary", "Daily AI", Icons.Default.Dashboard),
         BottomNavItem("settings", "Settings", Icons.Default.Settings)
     )
@@ -84,7 +88,7 @@ fun HackerNewsApp() {
                     bottomNavItems.forEach { item ->
                         NavigationBarItem(
                             icon = { Icon(item.icon, contentDescription = item.label) },
-                            label = { Text(item.label) },
+                            label = null,
                             selected = currentDestination?.hierarchy?.any { it.route == item.route } == true,
                             onClick = {
                                 // Check if we're already on the destination and trigger scroll-to-top
@@ -131,6 +135,9 @@ fun HackerNewsApp() {
                         val encodedTitle = URLEncoder.encode(title, StandardCharsets.UTF_8.toString())
                         navController.navigate("browser/$encodedUrl/$encodedTitle")
                     },
+                    onAuthorClick = { username ->
+                        navController.navigate("user/$username")
+                    },
                     onScrollToTopCallback = { callback ->
                         scrollToTopStories = callback
                     }
@@ -138,12 +145,25 @@ fun HackerNewsApp() {
             }
             
             composable("search") {
-                QuantumSearchScreen(
+                CrashProofSearchScreen(
+                    onBackClick = { navController.navigate("stories") },
                     onStoryClick = { story ->
                         navController.navigate("story/${story.id}")
                     },
-                    onScrollToTopCallback = { callback ->
-                        scrollToTopSearch = callback
+                    onAuthorClick = { username ->
+                        navController.navigate("user/$username")
+                    }
+                )
+            }
+            
+            composable("bookmarks") {
+                BookmarksScreen(
+                    onBackClick = { /* No back action needed for bottom nav */ },
+                    onStoryClick = { story ->
+                        navController.navigate("story/${story.id}")
+                    },
+                    onAuthorClick = { username ->
+                        navController.navigate("user/$username")
                     }
                 )
             }
@@ -153,6 +173,9 @@ fun HackerNewsApp() {
                     onBackClick = { /* No back action needed for bottom nav */ },
                     onStoryClick = { story ->
                         navController.navigate("story/${story.id}")
+                    },
+                    onAuthorClick = { username ->
+                        navController.navigate("user/$username")
                     },
                     onScrollToTopCallback = { callback ->
                         scrollToTopSummary = callback
@@ -249,6 +272,22 @@ fun HackerNewsApp() {
                             val encodedUrl = URLEncoder.encode(url, StandardCharsets.UTF_8.toString())
                             val encodedTitle = URLEncoder.encode(title, StandardCharsets.UTF_8.toString())
                             navController.navigate("browser/$encodedUrl/$encodedTitle")
+                        },
+                        onAuthorClick = { username ->
+                            navController.navigate("user/$username")
+                        }
+                    )
+                }
+            }
+            
+            composable("user/{username}") { backStackEntry ->
+                val username = backStackEntry.arguments?.getString("username")
+                if (username != null) {
+                    UserProfileScreen(
+                        username = username,
+                        onBackClick = { navController.popBackStack() },
+                        onStoryClick = { story ->
+                            navController.navigate("story/${story.id}")
                         }
                     )
                 }

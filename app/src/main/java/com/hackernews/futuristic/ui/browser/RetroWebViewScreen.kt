@@ -185,92 +185,53 @@ fun RetroWebViewScreen(
                 
                 Spacer(modifier = Modifier.height(8.dp))
                 
-                // Navigation Controls
+                // Simple Navigation
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Back Button
+                    // Cyberpunk Back Button
                     IconButton(
                         onClick = onBackClick,
                         modifier = Modifier
-                            .size(32.dp)
+                            .size(36.dp)
                             .background(
-                                Color.Black,
-                                RoundedCornerShape(4.dp)
+                                brush = Brush.radialGradient(
+                                    colors = listOf(
+                                        NeonBlue.copy(alpha = 0.2f),
+                                        Color.Black
+                                    )
+                                ),
+                                shape = RoundedCornerShape(6.dp)
                             )
                             .border(
-                                1.dp,
-                                NeonBlue,
-                                RoundedCornerShape(4.dp)
+                                2.dp,
+                                brush = Brush.linearGradient(
+                                    colors = listOf(NeonBlue, NeonCyan)
+                                ),
+                                shape = RoundedCornerShape(6.dp)
                             )
                     ) {
                         Icon(
                             imageVector = Icons.Default.ArrowBack,
                             contentDescription = "Back",
                             tint = NeonBlue,
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(18.dp)
                         )
                     }
                     
-                    // Refresh Button
-                    IconButton(
-                        onClick = { webView?.reload() },
-                        modifier = Modifier
-                            .size(32.dp)
-                            .background(
-                                Color.Black,
-                                RoundedCornerShape(4.dp)
-                            )
-                            .border(
-                                1.dp,
-                                NeonGreen,
-                                RoundedCornerShape(4.dp)
-                            )
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = "Refresh",
-                            tint = NeonGreen,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                    
-                    // Title
+                    // Title with cyberpunk styling
                     Text(
                         text = title,
                         color = NeonCyan,
-                        fontSize = 12.sp,
+                        fontSize = 14.sp,
                         fontFamily = MonospaceFont,
-                        fontWeight = FontWeight.Medium,
+                        fontWeight = FontWeight.Bold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f)
                     )
-                    
-                    // Close Button
-                    IconButton(
-                        onClick = onBackClick,
-                        modifier = Modifier
-                            .size(32.dp)
-                            .background(
-                                Color.Black,
-                                RoundedCornerShape(4.dp)
-                            )
-                            .border(
-                                1.dp,
-                                NeonRed,
-                                RoundedCornerShape(4.dp)
-                            )
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = "Close",
-                            tint = NeonRed,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
                 }
             }
         }

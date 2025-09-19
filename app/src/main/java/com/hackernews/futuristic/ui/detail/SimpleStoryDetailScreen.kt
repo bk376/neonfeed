@@ -1,19 +1,24 @@
 package com.hackernews.futuristic.ui.detail
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
@@ -31,6 +36,7 @@ import com.hackernews.futuristic.data.model.CognitiveMetrics
 import com.hackernews.futuristic.data.model.AttentionPattern
 import com.hackernews.futuristic.ui.components.BiometricReadingDisplay
 import com.hackernews.futuristic.ui.theme.*
+import com.hackernews.futuristic.utils.TextUtils
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Biotech
@@ -41,6 +47,7 @@ fun SimpleStoryDetailScreen(
     storyId: Long,
     onBackClick: () -> Unit,
     onUrlClick: ((String, String) -> Unit)? = null,
+    onAuthorClick: ((String) -> Unit)? = null,
     viewModel: StoryDetailViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -147,7 +154,8 @@ fun SimpleStoryDetailScreen(
                     item {
                         SimpleStoryHeader(
                             story = uiState.story!!,
-                            onUrlClick = onUrlClick
+                            onUrlClick = onUrlClick,
+                            onAuthorClick = onAuthorClick
                         )
                     }
                     
@@ -176,7 +184,8 @@ fun SimpleStoryDetailScreen(
                     ) { commentNode ->
                         ThreadedCommentCard(
                             commentNode = commentNode,
-                            depth = 0
+                            depth = 0,
+                            onAuthorClick = onAuthorClick
                         )
                     }
                 } // End LazyColumn
@@ -248,7 +257,8 @@ fun SimpleStoryDetailScreen(
 @Composable
 private fun SimpleStoryHeader(
     story: Story,
-    onUrlClick: ((String, String) -> Unit)? = null
+    onUrlClick: ((String, String) -> Unit)? = null,
+    onAuthorClick: ((String) -> Unit)? = null
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -280,7 +290,12 @@ private fun SimpleStoryHeader(
                     Text(
                         text = "by $author",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = NeonPurple
+                        color = if (onAuthorClick != null) NeonCyan else NeonPurple,
+                        modifier = if (onAuthorClick != null) {
+                            Modifier.clickable { onAuthorClick(author) }
+                        } else {
+                            Modifier
+                        }
                     )
                 }
                 
@@ -445,7 +460,8 @@ private fun SimpleCommentCard(comment: Comment) {
 // Comment tree data structure
 data class CommentNode(
     val comment: Comment,
-    val children: MutableList<CommentNode> = mutableListOf()
+    val children: MutableList<CommentNode> = mutableListOf(),
+    val depth: Int = 0
 )
 
 private fun buildCommentTree(comments: List<Comment>): List<CommentNode> {
@@ -482,9 +498,11 @@ private fun buildCommentTree(comments: List<Comment>): List<CommentNode> {
 private fun ThreadedCommentCard(
     commentNode: CommentNode,
     depth: Int,
-    maxDepth: Int = 6
+    maxDepth: Int = 6,
+    onAuthorClick: ((String) -> Unit)? = null
 ) {
     var isExpanded by remember { mutableStateOf(true) }
+    var isTextExpanded by remember { mutableStateOf(false) }
     val comment = commentNode.comment
     
     Column {
@@ -548,13 +566,22 @@ private fun ThreadedCommentCard(
                         Text(
                             text = comment.by ?: "Anonymous",
                             style = MaterialTheme.typography.labelMedium,
-                            color = when (depth % 4) {
-                                0 -> NeonPurple
-                                1 -> NeonBlue
-                                2 -> NeonGreen
-                                else -> NeonYellow
+                            color = if (onAuthorClick != null && comment.by != null) {
+                                NeonCyan // Clickable author names in cyan
+                            } else {
+                                when (depth % 4) {
+                                    0 -> NeonPurple
+                                    1 -> NeonBlue
+                                    2 -> NeonGreen
+                                    else -> NeonYellow
+                                }
                             },
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            modifier = if (onAuthorClick != null && comment.by != null) {
+                                Modifier.clickable { onAuthorClick(comment.by!!) }
+                            } else {
+                                Modifier
+                            }
                         )
                         
                         if (commentNode.children.isNotEmpty()) {
@@ -579,13 +606,18 @@ private fun ThreadedCommentCard(
                         if (commentNode.children.isNotEmpty()) {
                             IconButton(
                                 onClick = { isExpanded = !isExpanded },
-                                modifier = Modifier.size(24.dp)
+                                modifier = Modifier
+                                    .size(20.dp) // Smaller size
+                                    .background(
+                                        Color.Transparent, // No background
+                                        CircleShape
+                                    )
                             ) {
                                 Icon(
                                     imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                                     contentDescription = if (isExpanded) "Collapse" else "Expand",
-                                    tint = NeonBlue,
-                                    modifier = Modifier.size(16.dp)
+                                    tint = if (isExpanded) NeonBlue.copy(alpha = 0.7f) else NeonGreen.copy(alpha = 0.7f),
+                                    modifier = Modifier.size(14.dp) // Smaller icon
                                 )
                             }
                         }
@@ -597,24 +629,40 @@ private fun ThreadedCommentCard(
                     if (text.isNotBlank()) {
                         Spacer(modifier = Modifier.height(8.dp))
                         
-                        val displayText = text
-                            .replace("<p>", "\n")
-                            .replace("</p>", "")
-                            .replace("<br>", "\n")
-                            .replace("&gt;", ">")
-                            .replace("&lt;", "<")
-                            .replace("&amp;", "&")
-                            .replace("&#x27;", "'")
-                            .replace("&quot;", "\"")
-                            .take(800)
+                        val cleanedText = TextUtils.cleanCommentText(text)
+                        val isLongText = cleanedText.length > 300
+                        
+                        val displayText = if (isTextExpanded || !isLongText) {
+                            cleanedText
+                        } else {
+                            cleanedText.take(300) + "..."
+                        }
                         
                         Text(
                             text = displayText,
                             style = MaterialTheme.typography.bodyMedium,
                             color = LightText,
-                            maxLines = if (depth > 3) 4 else 8,
-                            overflow = TextOverflow.Ellipsis
+                            maxLines = if (isTextExpanded) Int.MAX_VALUE else (if (depth > 3) 4 else 8),
+                            overflow = if (isTextExpanded) TextOverflow.Visible else TextOverflow.Ellipsis
                         )
+                        
+                        // Show expand/collapse button for long text
+                        if (isLongText) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            TextButton(
+                                onClick = { isTextExpanded = !isTextExpanded },
+                                modifier = Modifier.padding(0.dp),
+                                colors = ButtonDefaults.textButtonColors(
+                                    contentColor = NeonBlue.copy(alpha = 0.8f)
+                                )
+                            ) {
+                                Text(
+                                    text = if (isTextExpanded) "Show less" else "Show more",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -626,7 +674,8 @@ private fun ThreadedCommentCard(
                 ThreadedCommentCard(
                     commentNode = childNode,
                     depth = depth + 1,
-                    maxDepth = maxDepth
+                    maxDepth = maxDepth,
+                    onAuthorClick = onAuthorClick
                 )
             }
         } else if (commentNode.children.isNotEmpty() && depth >= maxDepth) {

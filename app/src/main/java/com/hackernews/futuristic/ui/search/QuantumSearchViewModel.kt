@@ -42,32 +42,61 @@ class QuantumSearchViewModel @Inject constructor(
     private val _searchSuggestions = MutableStateFlow<List<SearchSuggestion>>(emptyList())
     val searchSuggestions: StateFlow<List<SearchSuggestion>> = _searchSuggestions.asStateFlow()
     
-    private val _isRegularMode = MutableStateFlow(false)
+    private val _isRegularMode = MutableStateFlow(true)
     val isRegularMode: StateFlow<Boolean> = _isRegularMode.asStateFlow()
+    
+    private val _bookmarkedStories = MutableStateFlow<Set<Long>>(emptySet())
+    val bookmarkedStories: StateFlow<Set<Long>> = _bookmarkedStories.asStateFlow()
+    
+    private val _selectedTimeRange = MutableStateFlow(RelativeTimeRange.TODAY)
+    val selectedTimeRange: StateFlow<RelativeTimeRange> = _selectedTimeRange.asStateFlow()
     
     private var allStories: List<Story> = emptyList()
     
     init {
         loadInitialData()
         generateInitialSuggestions()
+        updateBookmarkedStories()
     }
     
     private fun loadInitialData() {
         viewModelScope.launch {
             try {
-                // Load top stories for searching
-                repository.getTopStories().fold(
-                    onSuccess = { stories ->
-                        allStories = stories
-                    },
-                    onFailure = { error ->
-                        // If loading fails, show error and use empty list
-                        allStories = emptyList()
-                        _uiState.value = _uiState.value.copy(
-                            error = "Failed to load stories for search"
-                        )
-                    }
+                // Load more stories for better search results (combining multiple sources)
+                val topStoriesResult = repository.getTopStories(100)
+                val newStoriesResult = repository.getNewStories(100) 
+                val bestStoriesResult = repository.getBestStories(100)
+                
+                val allStoriesList = mutableListOf<Story>()
+                
+                topStoriesResult.fold(
+                    onSuccess = { stories -> allStoriesList.addAll(stories) },
+                    onFailure = { /* Continue with other sources */ }
                 )
+                
+                newStoriesResult.fold(
+                    onSuccess = { stories -> allStoriesList.addAll(stories) },
+                    onFailure = { /* Continue with other sources */ }
+                )
+                
+                bestStoriesResult.fold(
+                    onSuccess = { stories -> allStoriesList.addAll(stories) },
+                    onFailure = { /* Continue with other sources */ }
+                )
+                
+                // Remove duplicates and sort by score
+                allStories = allStoriesList
+                    .distinctBy { it.id }
+                    .sortedWith(
+                        compareByDescending<Story> { it.score ?: 0 }
+                            .thenByDescending { it.time }
+                    )
+                
+                if (allStories.isEmpty()) {
+                    _uiState.value = _uiState.value.copy(
+                        error = "Failed to load stories for search"
+                    )
+                }
             } catch (e: Exception) {
                 // If exception occurs, show error and use empty list
                 allStories = emptyList()
@@ -79,13 +108,21 @@ class QuantumSearchViewModel @Inject constructor(
     }
     
     fun updateSearchQuery(query: String) {
-        _searchQuery.value = query
-        
-        // Generate suggestions based on query
-        if (query.isNotEmpty()) {
-            generateSearchSuggestions(query)
-        } else {
+        try {
+            _searchQuery.value = query
+            
+            // Generate suggestions based on query
+            if (query.isNotEmpty()) {
+                generateSearchSuggestions(query)
+            } else {
+                _searchSuggestions.value = emptyList()
+            }
+        } catch (e: Exception) {
+            // Handle any errors during query update
             _searchSuggestions.value = emptyList()
+            _uiState.value = _uiState.value.copy(
+                error = "Search input error: ${e.message}"
+            )
         }
     }
     
@@ -149,23 +186,31 @@ class QuantumSearchViewModel @Inject constructor(
     }
     
     private suspend fun executeQuantumSearch(): QuantumSearchResult {
-        val quantumQuery = QuantumSearchQuery(
-            query = _searchQuery.value,
-            searchDimensions = _selectedDimensions.value,
-            timeRange = TimeRange(null, null, RelativeTimeRange.ALL_TIME),
-            quantumFilters = emptyList(),
-            searchMode = _searchMode.value,
-            probabilityThreshold = _probabilityThreshold.value
-        )
-        
-        return quantumSearchEngine.search(quantumQuery, allStories)
+        return try {
+            val quantumQuery = QuantumSearchQuery(
+                query = _searchQuery.value,
+                searchDimensions = _selectedDimensions.value,
+                timeRange = TimeRange(null, null, _selectedTimeRange.value),
+                quantumFilters = emptyList(),
+                searchMode = _searchMode.value,
+                probabilityThreshold = _probabilityThreshold.value
+            )
+            
+            quantumSearchEngine.search(quantumQuery, allStories)
+        } catch (e: Exception) {
+            // Fallback to regular search if quantum search fails
+            executeRegularSearch(_searchQuery.value)
+        }
     }
     
     private fun executeRegularSearch(query: String): QuantumSearchResult {
         val queryLower = query.lowercase()
         
+        // Apply time filtering first
+        val timeFilteredStories = filterStoriesByTimeRange(allStories, _selectedTimeRange.value)
+        
         // Simple keyword-based search
-        val filteredStories = allStories.filter { story ->
+        val filteredStories = timeFilteredStories.filter { story ->
             story.title?.lowercase()?.contains(queryLower) == true ||
             story.text?.lowercase()?.contains(queryLower) == true ||
             story.by?.lowercase()?.contains(queryLower) == true
@@ -315,6 +360,10 @@ class QuantumSearchViewModel @Inject constructor(
                 
             } catch (e: Exception) {
                 // Handle suggestion generation error silently
+                _searchSuggestions.value = emptyList()
+                _uiState.value = _uiState.value.copy(
+                    error = "Suggestion generation error: ${e.message}"
+                )
             }
         }
     }
@@ -407,6 +456,70 @@ class QuantumSearchViewModel @Inject constructor(
     
     fun retrySearch() {
         executeSearch()
+    }
+    
+    fun onSuggestionClick(suggestion: SearchSuggestion) {
+        // Update search query with the suggestion
+        _searchQuery.value = suggestion.query
+        
+        // Execute search with the suggested query
+        executeSearch()
+    }
+    
+    fun toggleBookmark(story: Story) {
+        viewModelScope.launch {
+            try {
+                val isCurrentlyBookmarked = repository.isBookmarked(story.id)
+                if (isCurrentlyBookmarked) {
+                    repository.removeBookmark(story.id)
+                } else {
+                    repository.bookmarkStory(story)
+                }
+                updateBookmarkedStories()
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    error = "Bookmark error: ${e.message}"
+                )
+            }
+        }
+    }
+    
+    fun isBookmarked(storyId: Long): Boolean {
+        return storyId in _bookmarkedStories.value
+    }
+    
+    private fun updateBookmarkedStories() {
+        viewModelScope.launch {
+            try {
+                repository.getBookmarkedStories().collect { bookmarks ->
+                    _bookmarkedStories.value = bookmarks.map { it.id }.toSet()
+                }
+            } catch (e: Exception) {
+                // Handle error silently for bookmarks
+            }
+        }
+    }
+    
+    fun setTimeRange(timeRange: RelativeTimeRange) {
+        _selectedTimeRange.value = timeRange
+        // Re-execute search if there's an active query
+        if (_searchQuery.value.isNotEmpty() && _uiState.value.searchResult != null) {
+            executeSearch()
+        }
+    }
+    
+    private fun filterStoriesByTimeRange(stories: List<Story>, timeRange: RelativeTimeRange): List<Story> {
+        if (timeRange == RelativeTimeRange.ALL_TIME) {
+            return stories
+        }
+        
+        val currentTime = System.currentTimeMillis() / 1000 // HackerNews uses Unix timestamp in seconds
+        val cutoffTime = currentTime - (timeRange.hours * 3600)
+        
+        return stories.filter { story ->
+            val storyTime = story.time ?: 0L
+            storyTime >= cutoffTime
+        }
     }
 }
 

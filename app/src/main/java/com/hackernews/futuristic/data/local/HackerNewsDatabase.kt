@@ -5,15 +5,17 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import android.content.Context
+import com.hackernews.futuristic.data.local.dao.BookmarkDao
 import com.hackernews.futuristic.data.local.dao.CommentDao
 import com.hackernews.futuristic.data.local.dao.StoryDao
+import com.hackernews.futuristic.data.local.entities.BookmarkEntity
 import com.hackernews.futuristic.data.local.entities.CommentEntity
 import com.hackernews.futuristic.data.local.entities.Converters
 import com.hackernews.futuristic.data.local.entities.StoryEntity
 
 @Database(
-    entities = [StoryEntity::class, CommentEntity::class],
-    version = 1,
+    entities = [StoryEntity::class, CommentEntity::class, BookmarkEntity::class],
+    version = 2,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -21,6 +23,7 @@ abstract class HackerNewsDatabase : RoomDatabase() {
     
     abstract fun storyDao(): StoryDao
     abstract fun commentDao(): CommentDao
+    abstract fun bookmarkDao(): BookmarkDao
     
     companion object {
         @Volatile

@@ -11,6 +11,8 @@ import androidx.room.util.DBUtil;
 import androidx.room.util.TableInfo;
 import androidx.sqlite.db.SupportSQLiteDatabase;
 import androidx.sqlite.db.SupportSQLiteOpenHelper;
+import com.hackernews.futuristic.data.local.dao.BookmarkDao;
+import com.hackernews.futuristic.data.local.dao.BookmarkDao_Impl;
 import com.hackernews.futuristic.data.local.dao.CommentDao;
 import com.hackernews.futuristic.data.local.dao.CommentDao_Impl;
 import com.hackernews.futuristic.data.local.dao.StoryDao;
@@ -34,22 +36,26 @@ public final class HackerNewsDatabase_Impl extends HackerNewsDatabase {
 
   private volatile CommentDao _commentDao;
 
+  private volatile BookmarkDao _bookmarkDao;
+
   @Override
   @NonNull
   protected SupportSQLiteOpenHelper createOpenHelper(@NonNull final DatabaseConfiguration config) {
-    final SupportSQLiteOpenHelper.Callback _openCallback = new RoomOpenHelper(config, new RoomOpenHelper.Delegate(1) {
+    final SupportSQLiteOpenHelper.Callback _openCallback = new RoomOpenHelper(config, new RoomOpenHelper.Delegate(2) {
       @Override
       public void createAllTables(@NonNull final SupportSQLiteDatabase db) {
         db.execSQL("CREATE TABLE IF NOT EXISTS `stories` (`id` INTEGER NOT NULL, `title` TEXT, `url` TEXT, `text` TEXT, `by` TEXT, `time` INTEGER NOT NULL, `score` INTEGER NOT NULL, `descendants` INTEGER, `kids` TEXT, `type` TEXT, `storyType` TEXT NOT NULL, `fetchedAt` INTEGER NOT NULL, PRIMARY KEY(`id`))");
         db.execSQL("CREATE TABLE IF NOT EXISTS `comments` (`id` INTEGER NOT NULL, `by` TEXT, `time` INTEGER NOT NULL, `text` TEXT, `kids` TEXT, `parent` INTEGER, `type` TEXT, `fetchedAt` INTEGER NOT NULL, PRIMARY KEY(`id`))");
+        db.execSQL("CREATE TABLE IF NOT EXISTS `bookmarks` (`storyId` INTEGER NOT NULL, `title` TEXT NOT NULL, `url` TEXT, `by` TEXT NOT NULL, `time` INTEGER NOT NULL, `score` INTEGER NOT NULL, `descendants` INTEGER NOT NULL, `bookmarkedAt` INTEGER NOT NULL, PRIMARY KEY(`storyId`))");
         db.execSQL("CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)");
-        db.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'e4ebd589c2e15874160b7fbfdad775ea')");
+        db.execSQL("INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '9ad9a3d5d0e8404ff433b44a7d721c68')");
       }
 
       @Override
       public void dropAllTables(@NonNull final SupportSQLiteDatabase db) {
         db.execSQL("DROP TABLE IF EXISTS `stories`");
         db.execSQL("DROP TABLE IF EXISTS `comments`");
+        db.execSQL("DROP TABLE IF EXISTS `bookmarks`");
         final List<? extends RoomDatabase.Callback> _callbacks = mCallbacks;
         if (_callbacks != null) {
           for (RoomDatabase.Callback _callback : _callbacks) {
@@ -133,9 +139,27 @@ public final class HackerNewsDatabase_Impl extends HackerNewsDatabase {
                   + " Expected:\n" + _infoComments + "\n"
                   + " Found:\n" + _existingComments);
         }
+        final HashMap<String, TableInfo.Column> _columnsBookmarks = new HashMap<String, TableInfo.Column>(8);
+        _columnsBookmarks.put("storyId", new TableInfo.Column("storyId", "INTEGER", true, 1, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsBookmarks.put("title", new TableInfo.Column("title", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsBookmarks.put("url", new TableInfo.Column("url", "TEXT", false, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsBookmarks.put("by", new TableInfo.Column("by", "TEXT", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsBookmarks.put("time", new TableInfo.Column("time", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsBookmarks.put("score", new TableInfo.Column("score", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsBookmarks.put("descendants", new TableInfo.Column("descendants", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        _columnsBookmarks.put("bookmarkedAt", new TableInfo.Column("bookmarkedAt", "INTEGER", true, 0, null, TableInfo.CREATED_FROM_ENTITY));
+        final HashSet<TableInfo.ForeignKey> _foreignKeysBookmarks = new HashSet<TableInfo.ForeignKey>(0);
+        final HashSet<TableInfo.Index> _indicesBookmarks = new HashSet<TableInfo.Index>(0);
+        final TableInfo _infoBookmarks = new TableInfo("bookmarks", _columnsBookmarks, _foreignKeysBookmarks, _indicesBookmarks);
+        final TableInfo _existingBookmarks = TableInfo.read(db, "bookmarks");
+        if (!_infoBookmarks.equals(_existingBookmarks)) {
+          return new RoomOpenHelper.ValidationResult(false, "bookmarks(com.hackernews.futuristic.data.local.entities.BookmarkEntity).\n"
+                  + " Expected:\n" + _infoBookmarks + "\n"
+                  + " Found:\n" + _existingBookmarks);
+        }
         return new RoomOpenHelper.ValidationResult(true, null);
       }
-    }, "e4ebd589c2e15874160b7fbfdad775ea", "527e93fa4156726e549e815adbefbb0a");
+    }, "9ad9a3d5d0e8404ff433b44a7d721c68", "5ac0d0ccbfcc731f0e43d821afd90cc2");
     final SupportSQLiteOpenHelper.Configuration _sqliteConfig = SupportSQLiteOpenHelper.Configuration.builder(config.context).name(config.name).callback(_openCallback).build();
     final SupportSQLiteOpenHelper _helper = config.sqliteOpenHelperFactory.create(_sqliteConfig);
     return _helper;
@@ -146,7 +170,7 @@ public final class HackerNewsDatabase_Impl extends HackerNewsDatabase {
   protected InvalidationTracker createInvalidationTracker() {
     final HashMap<String, String> _shadowTablesMap = new HashMap<String, String>(0);
     final HashMap<String, Set<String>> _viewTables = new HashMap<String, Set<String>>(0);
-    return new InvalidationTracker(this, _shadowTablesMap, _viewTables, "stories","comments");
+    return new InvalidationTracker(this, _shadowTablesMap, _viewTables, "stories","comments","bookmarks");
   }
 
   @Override
@@ -157,6 +181,7 @@ public final class HackerNewsDatabase_Impl extends HackerNewsDatabase {
       super.beginTransaction();
       _db.execSQL("DELETE FROM `stories`");
       _db.execSQL("DELETE FROM `comments`");
+      _db.execSQL("DELETE FROM `bookmarks`");
       super.setTransactionSuccessful();
     } finally {
       super.endTransaction();
@@ -173,6 +198,7 @@ public final class HackerNewsDatabase_Impl extends HackerNewsDatabase {
     final HashMap<Class<?>, List<Class<?>>> _typeConvertersMap = new HashMap<Class<?>, List<Class<?>>>();
     _typeConvertersMap.put(StoryDao.class, StoryDao_Impl.getRequiredConverters());
     _typeConvertersMap.put(CommentDao.class, CommentDao_Impl.getRequiredConverters());
+    _typeConvertersMap.put(BookmarkDao.class, BookmarkDao_Impl.getRequiredConverters());
     return _typeConvertersMap;
   }
 
@@ -215,6 +241,20 @@ public final class HackerNewsDatabase_Impl extends HackerNewsDatabase {
           _commentDao = new CommentDao_Impl(this);
         }
         return _commentDao;
+      }
+    }
+  }
+
+  @Override
+  public BookmarkDao bookmarkDao() {
+    if (_bookmarkDao != null) {
+      return _bookmarkDao;
+    } else {
+      synchronized(this) {
+        if(_bookmarkDao == null) {
+          _bookmarkDao = new BookmarkDao_Impl(this);
+        }
+        return _bookmarkDao;
       }
     }
   }

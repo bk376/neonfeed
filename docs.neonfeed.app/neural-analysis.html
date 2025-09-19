@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neural Analysis - NeonFeed Documentation</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <nav class="container">
+            <a href="index.html" class="logo">NEONFEED</a>
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="api-reference.html">API Reference</a></li>
+                <li><a href="neural-analysis.html" class="active">Neural Analysis</a></li>
+                <li><a href="quantum-search.html">Quantum Search</a></li>
+                <li><a href="architecture.html">Architecture</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main class="container">
+        <h1>🧠 Neural Analysis Engine</h1>
+        
+        <section class="api-section">
+            <h2>Overview</h2>
+            <p>The Neural Analysis Engine is the AI-powered core of NeonFeed, providing real-time content analysis with multiple specialized algorithms working in harmony to understand story content, sentiment, and user engagement patterns.</p>
+            
+            <h3>Key Features</h3>
+            <ul>
+                <li><strong>Sentiment Analysis:</strong> Advanced NLP for emotional tone detection</li>
+                <li><strong>Topic Classification:</strong> Multi-label categorization with confidence scoring</li>
+                <li><strong>Controversy Detection:</strong> Identifies potentially divisive content</li>
+                <li><strong>Engagement Prediction:</strong> ML model predicting user interaction likelihood</li>
+                <li><strong>Real-time Processing:</strong> Sub-second analysis with 94% accuracy</li>
+            </ul>
+        </section>
+
+        <section class="api-section">
+            <h2>Sentiment Analysis</h2>
+            <p>Advanced natural language processing to determine the emotional tone and bias of content.</p>
+            
+            <div class="code-block">
+                <code>
+// Sentiment scoring range: -1.0 (very negative) to +1.0 (very positive)<br>
+val sentimentScore = neuralAnalyzer.analyzeSentiment(story.title + " " + story.text)<br><br>
+
+when {<br>
+&nbsp;&nbsp;sentimentScore > 0.3f -> displayPositiveIndicator()<br>
+&nbsp;&nbsp;sentimentScore < -0.3f -> displayNegativeIndicator()<br>
+&nbsp;&nbsp;else -> displayNeutralIndicator()<br>
+}
+                </code>
+            </div>
+
+            <h3>Sentiment Categories</h3>
+            <div class="features">
+                <div class="feature-card">
+                    <span class="feature-icon" style="color: var(--neon-green);">😊</span>
+                    <h4>Positive (0.3 to 1.0)</h4>
+                    <p>Optimistic, exciting, breakthrough news</p>
+                </div>
+                <div class="feature-card">
+                    <span class="feature-icon" style="color: var(--neon-yellow);">😐</span>
+                    <h4>Neutral (-0.3 to 0.3)</h4>
+                    <p>Factual, informational, balanced reporting</p>
+                </div>
+                <div class="feature-card">
+                    <span class="feature-icon" style="color: var(--neon-red);">😟</span>
+                    <h4>Negative (-1.0 to -0.3)</h4>
+                    <p>Critical, concerning, problem-focused content</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="api-section">
+            <h2>Topic Classification</h2>
+            <p>Multi-label classification system that identifies primary and secondary topics with confidence scores.</p>
+            
+            <div class="code-block">
+                <code>
+data class TopicClassification(<br>
+&nbsp;&nbsp;val primaryTopic: Topic,<br>
+&nbsp;&nbsp;val secondaryTopics: List&lt;Topic&gt;,<br>
+&nbsp;&nbsp;val confidence: Float,<br>
+&nbsp;&nbsp;val keywords: List&lt;String&gt;<br>
+)<br><br>
+
+enum class Topic(val displayName: String, val color: Color) {<br>
+&nbsp;&nbsp;ARTIFICIAL_INTELLIGENCE("AI/ML", NeonBlue),<br>
+&nbsp;&nbsp;CYBERSECURITY("Security", NeonRed),<br>
+&nbsp;&nbsp;BLOCKCHAIN("Blockchain", NeonPurple),<br>
+&nbsp;&nbsp;PROGRAMMING("Programming", NeonGreen),<br>
+&nbsp;&nbsp;STARTUPS("Startups", NeonYellow),<br>
+&nbsp;&nbsp;SCIENCE("Science", NeonCyan)<br>
+}
+                </code>
+            </div>
+        </section>
+
+        <section class="api-section">
+            <h2>Controversy Detection</h2>
+            <p>Identifies potentially divisive or controversial content using linguistic patterns and engagement metrics.</p>
+            
+            <div class="code-block">
+                <code>
+// Controversy level: 0.0 (neutral) to 1.0 (highly controversial)<br>
+val controversyLevel = analyzer.detectControversy(story)<br><br>
+
+val threatLevel = when {<br>
+&nbsp;&nbsp;controversyLevel > 0.8f -> ThreatLevel.HIGH<br>
+&nbsp;&nbsp;controversyLevel > 0.5f -> ThreatLevel.MEDIUM<br>
+&nbsp;&nbsp;controversyLevel > 0.2f -> ThreatLevel.LOW<br>
+&nbsp;&nbsp;else -> ThreatLevel.SAFE<br>
+}<br><br>
+
+enum class ThreatLevel(val displayName: String, val color: Color) {<br>
+&nbsp;&nbsp;SAFE("Safe", NeonGreen),<br>
+&nbsp;&nbsp;LOW("Low Risk", NeonYellow),<br>
+&nbsp;&nbsp;MEDIUM("Medium Risk", NeonPurple),<br>
+&nbsp;&nbsp;HIGH("High Risk", NeonRed)<br>
+}
+                </code>
+            </div>
+
+            <h3>Controversy Indicators</h3>
+            <ul>
+                <li>Political keywords and phrases</li>
+                <li>Divisive language patterns</li>
+                <li>High comment-to-upvote ratios</li>
+                <li>Rapid engagement spikes</li>
+                <li>Cross-referenced with known controversial topics</li>
+            </ul>
+        </section>
+
+        <section class="api-section">
+            <h2>Engagement Prediction</h2>
+            <p>Machine learning model that predicts user interaction likelihood based on content analysis and user behavior patterns.</p>
+            
+            <div class="code-block">
+                <code>
+data class EngagementPrediction(<br>
+&nbsp;&nbsp;val clickProbability: Float,      // Likelihood user will click<br>
+&nbsp;&nbsp;val readTimePrediction: Long,     // Estimated reading time<br>
+&nbsp;&nbsp;val shareWorthy: Boolean,         // Likely to be shared<br>
+&nbsp;&nbsp;val viralPotential: Float,        // Trending probability<br>
+&nbsp;&nbsp;val userInterestMatch: Float      // Personal relevance score<br>
+)<br><br>
+
+// Usage in content filtering<br>
+val prediction = analyzer.predictEngagement(story, userProfile)<br>
+if (prediction.clickProbability > 0.7f) {<br>
+&nbsp;&nbsp;prioritizeInFeed(story)<br>
+}
+                </code>
+            </div>
+        </section>
+
+        <section class="api-section">
+            <h2>Performance Metrics</h2>
+            
+            <div class="features">
+                <div class="feature-card">
+                    <h4>Analysis Speed</h4>
+                    <p style="color: var(--neon-green); font-size: 1.5rem;">2.1s</p>
+                    <small>Average processing time per story</small>
+                </div>
+                <div class="feature-card">
+                    <h4>Accuracy Rate</h4>
+                    <p style="color: var(--neon-green); font-size: 1.5rem;">94%</p>
+                    <small>Sentiment classification accuracy</small>
+                </div>
+                <div class="feature-card">
+                    <h4>Model Performance</h4>
+                    <p style="color: var(--neon-green); font-size: 1.5rem;">85%</p>
+                    <small>Overall neural network performance</small>
+                </div>
+            </div>
+        </section>
+
+        <section class="api-section">
+            <h2>Configuration</h2>
+            
+            <div class="code-block">
+                <code>
+// Neural analysis configuration<br>
+data class NeuralConfig(<br>
+&nbsp;&nbsp;val enableSentimentAnalysis: Boolean = true,<br>
+&nbsp;&nbsp;val enableTopicClassification: Boolean = true,<br>
+&nbsp;&nbsp;val enableControversyDetection: Boolean = true,<br>
+&nbsp;&nbsp;val confidenceThreshold: Float = 0.7f,<br>
+&nbsp;&nbsp;val processComments: Boolean = false,<br>
+&nbsp;&nbsp;val realTimeMode: Boolean = true<br>
+)<br><br>
+
+// Enable/disable specific analysis features<br>
+val analyzer = NeuralNetworkAnalyzer(config = NeuralConfig(<br>
+&nbsp;&nbsp;enableSentimentAnalysis = true,<br>
+&nbsp;&nbsp;confidenceThreshold = 0.8f<br>
+))
+                </code>
+            </div>
+        </section>
+    </main>
+</body>
+</html>

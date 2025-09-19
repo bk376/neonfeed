@@ -1,6 +1,7 @@
 package com.hackernews.futuristic.data.repository;
 
 import com.hackernews.futuristic.data.api.HackerNewsApi;
+import com.hackernews.futuristic.data.local.dao.BookmarkDao;
 import com.hackernews.futuristic.data.local.dao.CommentDao;
 import com.hackernews.futuristic.data.local.dao.StoryDao;
 import dagger.internal.DaggerGenerated;
@@ -30,25 +31,30 @@ public final class HackerNewsRepository_Factory implements Factory<HackerNewsRep
 
   private final Provider<CommentDao> commentDaoProvider;
 
+  private final Provider<BookmarkDao> bookmarkDaoProvider;
+
   public HackerNewsRepository_Factory(Provider<HackerNewsApi> apiProvider,
-      Provider<StoryDao> storyDaoProvider, Provider<CommentDao> commentDaoProvider) {
+      Provider<StoryDao> storyDaoProvider, Provider<CommentDao> commentDaoProvider,
+      Provider<BookmarkDao> bookmarkDaoProvider) {
     this.apiProvider = apiProvider;
     this.storyDaoProvider = storyDaoProvider;
     this.commentDaoProvider = commentDaoProvider;
+    this.bookmarkDaoProvider = bookmarkDaoProvider;
   }
 
   @Override
   public HackerNewsRepository get() {
-    return newInstance(apiProvider.get(), storyDaoProvider.get(), commentDaoProvider.get());
+    return newInstance(apiProvider.get(), storyDaoProvider.get(), commentDaoProvider.get(), bookmarkDaoProvider.get());
   }
 
   public static HackerNewsRepository_Factory create(Provider<HackerNewsApi> apiProvider,
-      Provider<StoryDao> storyDaoProvider, Provider<CommentDao> commentDaoProvider) {
-    return new HackerNewsRepository_Factory(apiProvider, storyDaoProvider, commentDaoProvider);
+      Provider<StoryDao> storyDaoProvider, Provider<CommentDao> commentDaoProvider,
+      Provider<BookmarkDao> bookmarkDaoProvider) {
+    return new HackerNewsRepository_Factory(apiProvider, storyDaoProvider, commentDaoProvider, bookmarkDaoProvider);
   }
 
   public static HackerNewsRepository newInstance(HackerNewsApi api, StoryDao storyDao,
-      CommentDao commentDao) {
-    return new HackerNewsRepository(api, storyDao, commentDao);
+      CommentDao commentDao, BookmarkDao bookmarkDao) {
+    return new HackerNewsRepository(api, storyDao, commentDao, bookmarkDao);
   }
 }

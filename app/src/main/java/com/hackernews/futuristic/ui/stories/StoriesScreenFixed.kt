@@ -1,5 +1,7 @@
 package com.hackernews.futuristic.ui.stories
 
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -7,6 +9,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.pulltorefresh.PullToRefreshContainer
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.material.icons.Icons
@@ -14,13 +18,18 @@ import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.ViewInAr
 import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -31,21 +40,25 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hackernews.futuristic.data.model.Story
 import com.hackernews.futuristic.ui.components.UserProfileCard
 import com.hackernews.futuristic.ui.components.HolographicStoryPreview
+import com.hackernews.futuristic.ui.components.TimeRangeDropdown
 import com.hackernews.futuristic.ui.theme.*
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StoriesScreenFixed(
     onStoryClick: (Story) -> Unit,
     onUrlClick: ((String, String) -> Unit)? = null,
+    onAuthorClick: ((String) -> Unit)? = null,
     onScrollToTopCallback: ((suspend () -> Unit) -> Unit)? = null,
     viewModel: StoriesViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val selectedStoryType by viewModel.selectedStoryType.collectAsStateWithLifecycle()
+    // val selectedStoryType by viewModel.selectedStoryType.collectAsStateWithLifecycle() // Removed - using only TOP stories now
     val isNeuralAnalysisEnabled by viewModel.isNeuralAnalysisEnabled.collectAsStateWithLifecycle()
     val isHolographicModeEnabled by viewModel.isHolographicModeEnabled.collectAsStateWithLifecycle()
     val userProfile by viewModel.userProfile.collectAsStateWithLifecycle()
     val analysisResults by viewModel.analysisResults.collectAsStateWithLifecycle()
+    val selectedTimeRange by viewModel.selectedTimeRange.collectAsStateWithLifecycle()
     
     Column(
         modifier = Modifier
@@ -82,112 +95,27 @@ fun StoriesScreenFixed(
                 
                 Spacer(modifier = Modifier.height(12.dp))
                 
-                // Story type selector
+                // Filter Controls
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    StoryType.values().forEach { type ->
-                        FixedButton(
-                            text = type.name,
-                            isSelected = selectedStoryType == type,
-                            onClick = { viewModel.selectStoryType(type) },
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
-                
-                Spacer(modifier = Modifier.height(12.dp))
-                
-                // Neural analysis toggle
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { viewModel.toggleNeuralAnalysis() }
-                        .background(
-                            if (isNeuralAnalysisEnabled) NeonGreen.copy(alpha = 0.1f) else Color.Transparent,
-                            RoundedCornerShape(4.dp)
-                        )
-                        .border(
-                            1.dp,
-                            if (isNeuralAnalysisEnabled) NeonGreen else DarkBorder,
-                            RoundedCornerShape(4.dp)
-                        )
-                        .padding(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Memory,
-                        contentDescription = "Neural Analysis",
-                        tint = if (isNeuralAnalysisEnabled) NeonGreen else TextSecondary,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    
                     Text(
-                        text = "NEURAL ANALYSIS",
-                        color = if (isNeuralAnalysisEnabled) NeonGreen else TextSecondary,
+                        text = "FILTER BY TIME:",
+                        color = NeonGreen,
                         fontSize = 12.sp,
                         fontFamily = MonospaceFont,
                         fontWeight = FontWeight.Bold
                     )
                     
-                    Spacer(modifier = Modifier.weight(1f))
-                    
-                    Text(
-                        text = if (isNeuralAnalysisEnabled) "ON" else "OFF",
-                        color = if (isNeuralAnalysisEnabled) NeonGreen else TextSecondary,
-                        fontSize = 10.sp,
-                        fontFamily = MonospaceFont,
-                        fontWeight = FontWeight.Bold
+                    TimeRangeDropdown(
+                        selectedTimeRange = selectedTimeRange,
+                        onTimeRangeChange = viewModel::setTimeRange,
+                        modifier = Modifier.wrapContentWidth()
                     )
                 }
                 
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                // Holographic mode toggle
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { viewModel.toggleHolographicMode() }
-                        .background(
-                            if (isHolographicModeEnabled) NeonPurple.copy(alpha = 0.1f) else Color.Transparent,
-                            RoundedCornerShape(4.dp)
-                        )
-                        .border(
-                            1.dp,
-                            if (isHolographicModeEnabled) NeonPurple else DarkBorder,
-                            RoundedCornerShape(4.dp)
-                        )
-                        .padding(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.ViewInAr,
-                        contentDescription = "Holographic Mode",
-                        tint = if (isHolographicModeEnabled) NeonPurple else TextSecondary,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    
-                    Text(
-                        text = "HOLOGRAPHIC MODE",
-                        color = if (isHolographicModeEnabled) NeonPurple else TextSecondary,
-                        fontSize = 12.sp,
-                        fontFamily = MonospaceFont,
-                        fontWeight = FontWeight.Bold
-                    )
-                    
-                    Spacer(modifier = Modifier.weight(1f))
-                    
-                    Text(
-                        text = if (isHolographicModeEnabled) "ON" else "OFF",
-                        color = if (isHolographicModeEnabled) NeonPurple else TextSecondary,
-                        fontSize = 10.sp,
-                        fontFamily = MonospaceFont,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
             }
         }
         
@@ -277,7 +205,21 @@ fun StoriesScreenFixed(
                         }
                 }
                 
-                Box(modifier = Modifier.fillMaxSize()) {
+                // Pull to refresh state
+                val pullToRefreshState = rememberPullToRefreshState()
+                
+                LaunchedEffect(pullToRefreshState.isRefreshing) {
+                    if (pullToRefreshState.isRefreshing) {
+                        viewModel.refreshStories()
+                        pullToRefreshState.endRefresh()
+                    }
+                }
+                
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .nestedScroll(pullToRefreshState.nestedScrollConnection)
+                ) {
                     LazyColumn(
                         state = listState,
                         modifier = Modifier.fillMaxSize(),
@@ -318,7 +260,10 @@ fun StoriesScreenFixed(
                                         onStoryClick(story)
                                         viewModel.onStoryRead(story, readingTime = 180L, completed = true)
                                     },
-                                    onUrlClick = onUrlClick
+                                    onUrlClick = onUrlClick,
+                                    isBookmarked = viewModel.isBookmarked(story.id),
+                                    onBookmarkClick = { viewModel.toggleBookmark(story) },
+                                    onAuthorClick = onAuthorClick
                                 )
                             }
                             
@@ -371,6 +316,12 @@ fun StoriesScreenFixed(
                             )
                         }
                     }
+                    
+                    // Pull-to-refresh indicator
+                    PullToRefreshContainer(
+                        state = pullToRefreshState,
+                        modifier = Modifier.align(Alignment.TopCenter)
+                    )
                 }
             }
         }
@@ -378,27 +329,104 @@ fun StoriesScreenFixed(
 }
 
 @Composable
-fun FixedButton(
+fun CyberpunkButton(
     text: String,
     isSelected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Button(
-        onClick = onClick,
-        modifier = modifier.height(36.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = if (isSelected) NeonBlue else DarkCard,
-            contentColor = if (isSelected) Color.Black else NeonBlue
-        ),
-        shape = RoundedCornerShape(4.dp)
+    val animatedAlpha by animateFloatAsState(
+        targetValue = if (isSelected) 1f else 0.7f,
+        animationSpec = tween(300)
+    )
+    
+    val glowColor = when (text.uppercase()) {
+        "TOP" -> NeonBlue
+        "NEW" -> NeonGreen  
+        "BEST" -> NeonGold
+        else -> NeonBlue
+    }
+    
+    Box(
+        modifier = modifier
+            .height(44.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(
+                if (isSelected) {
+                    Brush.linearGradient(
+                        colors = listOf(
+                            glowColor.copy(alpha = 0.3f),
+                            glowColor.copy(alpha = 0.1f),
+                            glowColor.copy(alpha = 0.3f)
+                        )
+                    )
+                } else {
+                    Brush.linearGradient(
+                        colors = listOf(
+                            DarkCard,
+                            DarkSurface,
+                            DarkCard
+                        )
+                    )
+                }
+            )
+            .border(
+                width = if (isSelected) 2.dp else 1.dp,
+                brush = Brush.linearGradient(
+                    colors = if (isSelected) {
+                        listOf(glowColor, glowColor.copy(alpha = 0.5f), glowColor)
+                    } else {
+                        listOf(DarkBorder, DarkBorder.copy(alpha = 0.3f), DarkBorder)
+                    }
+                ),
+                shape = RoundedCornerShape(8.dp)
+            )
+            .clickable { onClick() }
+            .alpha(animatedAlpha),
+        contentAlignment = Alignment.Center
     ) {
+        // Glowing text effect
         Text(
-            text = text,
-            fontSize = 11.sp,
+            text = text.uppercase(),
+            fontSize = 12.sp,
             fontWeight = FontWeight.Bold,
-            fontFamily = MonospaceFont
+            fontFamily = MonospaceFont,
+            color = if (isSelected) glowColor else TextSecondary,
+            style = if (isSelected) {
+                LocalTextStyle.current.copy(
+                    shadow = androidx.compose.ui.graphics.Shadow(
+                        color = glowColor,
+                        offset = androidx.compose.ui.geometry.Offset(0f, 0f),
+                        blurRadius = 8f
+                    )
+                )
+            } else {
+                LocalTextStyle.current
+            }
         )
+        
+        // Cyberpunk accent lines
+        if (isSelected) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val strokeWidth = 1.dp.toPx()
+                
+                // Top accent line
+                drawLine(
+                    color = glowColor,
+                    start = androidx.compose.ui.geometry.Offset(size.width * 0.2f, 0f),
+                    end = androidx.compose.ui.geometry.Offset(size.width * 0.8f, 0f),
+                    strokeWidth = strokeWidth
+                )
+                
+                // Bottom accent line  
+                drawLine(
+                    color = glowColor,
+                    start = androidx.compose.ui.geometry.Offset(size.width * 0.2f, size.height),
+                    end = androidx.compose.ui.geometry.Offset(size.width * 0.8f, size.height),
+                    strokeWidth = strokeWidth
+                )
+            }
+        }
     }
 }
 
@@ -406,7 +434,10 @@ fun FixedButton(
 fun EnhancedStoryCard(
     story: Story,
     onStoryClick: () -> Unit,
-    onUrlClick: ((String, String) -> Unit)? = null
+    onUrlClick: ((String, String) -> Unit)? = null,
+    isBookmarked: Boolean = false,
+    onBookmarkClick: (() -> Unit)? = null,
+    onAuthorClick: ((String) -> Unit)? = null
 ) {
     Card(
         modifier = Modifier
@@ -494,12 +525,32 @@ fun EnhancedStoryCard(
                 story.by?.let { author ->
                     Text(
                         text = author,
-                        color = TextSecondary,
+                        color = if (onAuthorClick != null) NeonCyan else TextSecondary,
                         fontSize = 12.sp,
                         fontFamily = MonospaceFont,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = if (onAuthorClick != null) {
+                            Modifier.clickable { onAuthorClick(author) }
+                        } else {
+                            Modifier
+                        }
                     )
+                }
+                
+                // Bookmark button
+                onBookmarkClick?.let { onClick ->
+                    IconButton(
+                        onClick = onClick,
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                            contentDescription = if (isBookmarked) "Remove bookmark" else "Add bookmark",
+                            tint = if (isBookmarked) NeonGold else TextSecondary.copy(alpha = 0.7f),
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
                 }
             }
             

@@ -7,12 +7,19 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -34,6 +41,8 @@ fun QuantumSearchScreen(
     val probabilityThreshold by viewModel.probabilityThreshold.collectAsStateWithLifecycle()
     val searchSuggestions by viewModel.searchSuggestions.collectAsStateWithLifecycle()
     val isRegularMode by viewModel.isRegularMode.collectAsStateWithLifecycle()
+    val bookmarkedStories by viewModel.bookmarkedStories.collectAsStateWithLifecycle()
+    val selectedTimeRange by viewModel.selectedTimeRange.collectAsStateWithLifecycle()
     
     val scrollState = rememberScrollState()
     
@@ -56,8 +65,8 @@ fun QuantumSearchScreen(
                 )
             )
     ) {
-        // Header with mode toggle
-        QuantumSearchHeader(
+        // Simplified Header
+        SimpleSearchHeader(
             isRegularMode = isRegularMode,
             onModeToggle = viewModel::toggleSearchMode,
             modifier = Modifier.padding(16.dp)
@@ -68,32 +77,37 @@ fun QuantumSearchScreen(
             query = searchQuery,
             onQueryChange = viewModel::updateSearchQuery,
             onSearch = viewModel::executeSearch,
-            searchSuggestions = if (isRegularMode) emptyList() else searchSuggestions,
-            onSuggestionClick = { suggestion ->
-                viewModel.updateSearchQuery(suggestion.query)
-                viewModel.executeSearch()
-            },
+            searchSuggestions = searchSuggestions,
+            onSuggestionClick = viewModel::onSuggestionClick,
             isSearching = uiState.isSearching,
             isRegularMode = isRegularMode,
             modifier = Modifier.padding(horizontal = 16.dp)
         )
         
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        // Search Controls (only show in quantum mode)
-        if (!isRegularMode) {
-            QuantumSearchControls(
-                searchMode = searchMode,
-                onSearchModeChange = viewModel::setSearchMode,
-                selectedDimensions = selectedDimensions,
-                onDimensionToggle = viewModel::toggleDimension,
-                probabilityThreshold = probabilityThreshold,
-                onProbabilityChange = viewModel::setProbabilityThreshold,
-                modifier = Modifier.padding(horizontal = 16.dp)
+        // Time Range Filter
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "TIME FILTER:",
+                color = TextSecondary,
+                fontSize = 10.sp,
+                fontFamily = MonospaceFont,
+                fontWeight = FontWeight.Bold
+            )
+            
+            TimeRangeDropdown(
+                selectedTimeRange = selectedTimeRange,
+                onTimeRangeChange = viewModel::setTimeRange,
+                modifier = Modifier.wrapContentWidth()
             )
         }
         
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(8.dp))
         
         // Search Results
         when {
@@ -113,82 +127,61 @@ fun QuantumSearchScreen(
                 QuantumSearchResults(
                     searchResult = uiState.searchResult!!,
                     onStoryClick = onStoryClick,
+                    isBookmarked = { storyId -> viewModel.isBookmarked(storyId) },
+                    onBookmarkClick = { story -> viewModel.toggleBookmark(story) },
                     modifier = Modifier.fillMaxSize()
                 )
             }
             else -> {
-                if (isRegularMode) {
-                    RegularSearchWelcome(
-                        onQuickSearch = { query ->
-                            viewModel.updateSearchQuery(query)
-                            viewModel.executeSearch()
-                        },
-                        scrollState = scrollState,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                } else {
-                    QuantumSearchWelcome(
-                        onQuickSearch = { query ->
-                            viewModel.updateSearchQuery(query)
-                            viewModel.executeSearch()
-                        },
-                        scrollState = scrollState,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
+                SimpleSearchWelcome(
+                    isRegularMode = isRegularMode,
+                    onQuickSearch = { query ->
+                        viewModel.updateSearchQuery(query)
+                        viewModel.executeSearch()
+                    },
+                    modifier = Modifier.fillMaxSize()
+                )
             }
         }
     }
 }
 
 @Composable
-private fun QuantumSearchHeader(
+private fun SimpleSearchHeader(
     isRegularMode: Boolean,
     onModeToggle: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier = modifier) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "SEARCH",
+            color = NeonBlue,
+            fontSize = 24.sp,
+            fontFamily = MonospaceFont,
+            fontWeight = FontWeight.Bold
+        )
+        
+        // Small mode toggle
+        TextButton(
+            onClick = onModeToggle,
+            colors = ButtonDefaults.textButtonColors(
+                contentColor = if (isRegularMode) NeonGreen else NeonPurple
+            )
         ) {
-            Column {
-                Text(
-                    text = if (isRegularMode) "REGULAR SEARCH" else "QUANTUM SEARCH ENGINE",
-                    color = if (isRegularMode) NeonGreen else NeonBlue,
-                    fontSize = 24.sp,
-                    fontFamily = MonospaceFont,
-                    fontWeight = FontWeight.Bold
-                )
-                
-                Text(
-                    text = if (isRegularMode) "Simple keyword-based search" else "Multi-dimensional content discovery system",
-                    color = TextSecondary,
-                    fontSize = 12.sp,
-                    fontFamily = MonospaceFont
-                )
-            }
-            
-            // Mode toggle button
-            Button(
-                onClick = onModeToggle,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isRegularMode) NeonBlue else NeonGreen,
-                    contentColor = androidx.compose.ui.graphics.Color.Black
-                ),
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(6.dp)
-            ) {
-                Text(
-                    text = if (isRegularMode) "QUANTUM" else "REGULAR",
-                    fontFamily = MonospaceFont,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 10.sp
-                )
-            }
+            Text(
+                text = if (isRegularMode) "⚡ REGULAR" else "🔮 QUANTUM",
+                fontFamily = MonospaceFont,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }
+
 
 @Composable
 private fun QuantumSearchLoadingIndicator(
@@ -207,7 +200,7 @@ private fun QuantumSearchLoadingIndicator(
             )
             
             Text(
-                text = "QUANTUM PROCESSING...",
+                text = "SEARCHING...",
                 color = NeonBlue,
                 fontSize = 14.sp,
                 fontFamily = MonospaceFont,
@@ -215,7 +208,7 @@ private fun QuantumSearchLoadingIndicator(
             )
             
             Text(
-                text = "Analyzing dimensional probabilities",
+                text = "Processing search query...",
                 color = TextSecondary,
                 fontSize = 10.sp,
                 fontFamily = MonospaceFont
@@ -271,22 +264,12 @@ private fun QuantumSearchError(
 }
 
 @Composable
-private fun QuantumSearchWelcome(
+private fun SimpleSearchWelcome(
+    isRegularMode: Boolean,
     onQuickSearch: (String) -> Unit,
-    scrollState: ScrollState,
     modifier: Modifier = Modifier
 ) {
-    val lazyListState = rememberLazyListState()
-    
-    // Sync lazy list with scroll state
-    LaunchedEffect(scrollState.value) {
-        if (scrollState.value == 0) {
-            lazyListState.animateScrollToItem(0)
-        }
-    }
-    
     LazyColumn(
-        state = lazyListState,
         modifier = modifier.padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
@@ -300,33 +283,31 @@ private fun QuantumSearchWelcome(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
-                        text = "WELCOME TO QUANTUM SEARCH",
-                        color = NeonGreen,
+                        text = if (isRegularMode) "SEARCH STORIES" else "QUANTUM SEARCH",
+                        color = if (isRegularMode) NeonGreen else NeonBlue,
                         fontSize = 18.sp,
                         fontFamily = MonospaceFont,
                         fontWeight = FontWeight.Bold
                     )
                     
                     Text(
-                        text = "Experience next-generation content discovery with multi-dimensional search capabilities:",
+                        text = if (isRegularMode) 
+                            "Search Hacker News stories by keyword, author, or content." 
+                        else 
+                            "Advanced AI-powered search with multi-dimensional analysis.",
                         color = LightText,
                         fontSize = 14.sp,
                         fontFamily = MonospaceFont
                     )
-                    
-                    Spacer(modifier = Modifier.height(8.dp))
-                    
-                    QuantumFeaturesList()
                 }
             }
         }
         
         item {
-            QuickSearchSuggestions(onQuickSearch = onQuickSearch)
-        }
-        
-        item {
-            QuantumSearchTips()
+            SimpleQuickSearchSuggestions(
+                isRegularMode = isRegularMode,
+                onQuickSearch = onQuickSearch
+            )
         }
     }
 }
@@ -355,48 +336,46 @@ private fun QuantumFeaturesList() {
 }
 
 @Composable
-private fun QuickSearchSuggestions(
+private fun SimpleQuickSearchSuggestions(
+    isRegularMode: Boolean,
     onQuickSearch: (String) -> Unit
 ) {
-    val suggestions = listOf(
-        "artificial intelligence",
-        "quantum computing",
-        "blockchain technology",
-        "cybersecurity",
-        "machine learning",
-        "web development"
-    )
+    val suggestions = if (isRegularMode) {
+        listOf("AI", "JavaScript", "Python", "Startup", "Security", "Crypto")
+    } else {
+        listOf("AI", "Quantum", "Blockchain", "Security", "Web3", "ML")
+    }
     
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
-            text = "QUICK SEARCH",
-            color = NeonYellow,
+            text = "POPULAR SEARCHES",
+            color = if (isRegularMode) NeonGreen else NeonBlue,
             fontSize = 14.sp,
             fontFamily = MonospaceFont,
             fontWeight = FontWeight.Bold
         )
         
-        suggestions.chunked(2).forEach { row ->
+        // Simple grid of suggestion chips
+        suggestions.chunked(3).forEach { row ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 row.forEach { suggestion ->
-                    Button(
+                    AssistChip(
                         onClick = { onQuickSearch(suggestion) },
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(
+                        label = {
+                            Text(
+                                text = suggestion,
+                                fontSize = 12.sp,
+                                fontFamily = MonospaceFont
+                            )
+                        },
+                        colors = AssistChipDefaults.assistChipColors(
                             containerColor = DarkCard,
-                            contentColor = NeonYellow
-                        ),
-                        shape = androidx.compose.foundation.shape.RoundedCornerShape(6.dp)
-                    ) {
-                        Text(
-                            text = suggestion,
-                            fontSize = 10.sp,
-                            fontFamily = MonospaceFont
+                            labelColor = if (isRegularMode) NeonGreen else NeonBlue
                         )
-                    }
+                    )
                 }
             }
         }

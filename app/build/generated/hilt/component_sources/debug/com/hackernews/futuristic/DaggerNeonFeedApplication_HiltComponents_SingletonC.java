@@ -18,31 +18,46 @@ import com.hackernews.futuristic.data.analyzer.NeuralSynthesizer;
 import com.hackernews.futuristic.data.analyzer.QuantumSearchEngine;
 import com.hackernews.futuristic.data.api.HackerNewsApi;
 import com.hackernews.futuristic.data.local.HackerNewsDatabase;
+import com.hackernews.futuristic.data.local.dao.BookmarkDao;
 import com.hackernews.futuristic.data.local.dao.CommentDao;
 import com.hackernews.futuristic.data.local.dao.StoryDao;
 import com.hackernews.futuristic.data.profile.UserProfileManager;
 import com.hackernews.futuristic.data.repository.HackerNewsRepository;
+import com.hackernews.futuristic.data.repository.SettingsRepository;
+import com.hackernews.futuristic.data.service.CloudLLMService;
+import com.hackernews.futuristic.data.service.GeminiApiService;
 import com.hackernews.futuristic.di.DatabaseModule;
+import com.hackernews.futuristic.di.DatabaseModule_ProvideBookmarkDaoFactory;
 import com.hackernews.futuristic.di.DatabaseModule_ProvideCommentDaoFactory;
 import com.hackernews.futuristic.di.DatabaseModule_ProvideHackerNewsDatabaseFactory;
 import com.hackernews.futuristic.di.DatabaseModule_ProvideStoryDaoFactory;
 import com.hackernews.futuristic.di.NetworkModule;
+import com.hackernews.futuristic.di.NetworkModule_ProvideCloudLLMServiceFactory;
+import com.hackernews.futuristic.di.NetworkModule_ProvideGeminiApiServiceFactory;
 import com.hackernews.futuristic.di.NetworkModule_ProvideGsonFactory;
 import com.hackernews.futuristic.di.NetworkModule_ProvideHackerNewsApiFactory;
 import com.hackernews.futuristic.di.NetworkModule_ProvideOkHttpClientFactory;
 import com.hackernews.futuristic.di.NetworkModule_ProvideRetrofitFactory;
+import com.hackernews.futuristic.ui.bookmarks.BookmarksViewModel;
+import com.hackernews.futuristic.ui.bookmarks.BookmarksViewModel_HiltModules_KeyModule_ProvideFactory;
 import com.hackernews.futuristic.ui.detail.StoryDetailViewModel;
 import com.hackernews.futuristic.ui.detail.StoryDetailViewModel_HiltModules_KeyModule_ProvideFactory;
+import com.hackernews.futuristic.ui.search.CrashProofSearchViewModel;
+import com.hackernews.futuristic.ui.search.CrashProofSearchViewModel_HiltModules_KeyModule_ProvideFactory;
 import com.hackernews.futuristic.ui.search.QuantumSearchViewModel;
 import com.hackernews.futuristic.ui.search.QuantumSearchViewModel_HiltModules_KeyModule_ProvideFactory;
 import com.hackernews.futuristic.ui.search.SearchViewModel;
 import com.hackernews.futuristic.ui.search.SearchViewModel_HiltModules_KeyModule_ProvideFactory;
+import com.hackernews.futuristic.ui.search.SimpleSearchViewModel;
+import com.hackernews.futuristic.ui.search.SimpleSearchViewModel_HiltModules_KeyModule_ProvideFactory;
 import com.hackernews.futuristic.ui.settings.SettingsViewModel;
 import com.hackernews.futuristic.ui.settings.SettingsViewModel_HiltModules_KeyModule_ProvideFactory;
 import com.hackernews.futuristic.ui.stories.StoriesViewModel;
 import com.hackernews.futuristic.ui.stories.StoriesViewModel_HiltModules_KeyModule_ProvideFactory;
 import com.hackernews.futuristic.ui.summary.DailySummaryViewModel;
 import com.hackernews.futuristic.ui.summary.DailySummaryViewModel_HiltModules_KeyModule_ProvideFactory;
+import com.hackernews.futuristic.ui.user.UserProfileViewModel;
+import com.hackernews.futuristic.ui.user.UserProfileViewModel_HiltModules_KeyModule_ProvideFactory;
 import com.hackernews.futuristic.work.WorkManagerScheduler;
 import dagger.hilt.android.ActivityRetainedLifecycle;
 import dagger.hilt.android.ViewModelLifecycle;
@@ -431,7 +446,7 @@ public final class DaggerNeonFeedApplication_HiltComponents_SingletonC {
 
     @Override
     public Set<String> getViewModelKeys() {
-      return SetBuilder.<String>newSetBuilder(6).add(DailySummaryViewModel_HiltModules_KeyModule_ProvideFactory.provide()).add(QuantumSearchViewModel_HiltModules_KeyModule_ProvideFactory.provide()).add(SearchViewModel_HiltModules_KeyModule_ProvideFactory.provide()).add(SettingsViewModel_HiltModules_KeyModule_ProvideFactory.provide()).add(StoriesViewModel_HiltModules_KeyModule_ProvideFactory.provide()).add(StoryDetailViewModel_HiltModules_KeyModule_ProvideFactory.provide()).build();
+      return SetBuilder.<String>newSetBuilder(10).add(BookmarksViewModel_HiltModules_KeyModule_ProvideFactory.provide()).add(CrashProofSearchViewModel_HiltModules_KeyModule_ProvideFactory.provide()).add(DailySummaryViewModel_HiltModules_KeyModule_ProvideFactory.provide()).add(QuantumSearchViewModel_HiltModules_KeyModule_ProvideFactory.provide()).add(SearchViewModel_HiltModules_KeyModule_ProvideFactory.provide()).add(SettingsViewModel_HiltModules_KeyModule_ProvideFactory.provide()).add(SimpleSearchViewModel_HiltModules_KeyModule_ProvideFactory.provide()).add(StoriesViewModel_HiltModules_KeyModule_ProvideFactory.provide()).add(StoryDetailViewModel_HiltModules_KeyModule_ProvideFactory.provide()).add(UserProfileViewModel_HiltModules_KeyModule_ProvideFactory.provide()).build();
     }
 
     @Override
@@ -457,6 +472,10 @@ public final class DaggerNeonFeedApplication_HiltComponents_SingletonC {
 
     private final ViewModelCImpl viewModelCImpl = this;
 
+    private Provider<BookmarksViewModel> bookmarksViewModelProvider;
+
+    private Provider<CrashProofSearchViewModel> crashProofSearchViewModelProvider;
+
     private Provider<DailySummaryViewModel> dailySummaryViewModelProvider;
 
     private Provider<QuantumSearchViewModel> quantumSearchViewModelProvider;
@@ -465,9 +484,13 @@ public final class DaggerNeonFeedApplication_HiltComponents_SingletonC {
 
     private Provider<SettingsViewModel> settingsViewModelProvider;
 
+    private Provider<SimpleSearchViewModel> simpleSearchViewModelProvider;
+
     private Provider<StoriesViewModel> storiesViewModelProvider;
 
     private Provider<StoryDetailViewModel> storyDetailViewModelProvider;
+
+    private Provider<UserProfileViewModel> userProfileViewModelProvider;
 
     private ViewModelCImpl(SingletonCImpl singletonCImpl,
         ActivityRetainedCImpl activityRetainedCImpl, SavedStateHandle savedStateHandleParam,
@@ -482,17 +505,21 @@ public final class DaggerNeonFeedApplication_HiltComponents_SingletonC {
     @SuppressWarnings("unchecked")
     private void initialize(final SavedStateHandle savedStateHandleParam,
         final ViewModelLifecycle viewModelLifecycleParam) {
-      this.dailySummaryViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 0);
-      this.quantumSearchViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 1);
-      this.searchViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 2);
-      this.settingsViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 3);
-      this.storiesViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 4);
-      this.storyDetailViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 5);
+      this.bookmarksViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 0);
+      this.crashProofSearchViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 1);
+      this.dailySummaryViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 2);
+      this.quantumSearchViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 3);
+      this.searchViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 4);
+      this.settingsViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 5);
+      this.simpleSearchViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 6);
+      this.storiesViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 7);
+      this.storyDetailViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 8);
+      this.userProfileViewModelProvider = new SwitchingProvider<>(singletonCImpl, activityRetainedCImpl, viewModelCImpl, 9);
     }
 
     @Override
     public Map<String, Provider<ViewModel>> getHiltViewModelMap() {
-      return MapBuilder.<String, Provider<ViewModel>>newMapBuilder(6).put("com.hackernews.futuristic.ui.summary.DailySummaryViewModel", ((Provider) dailySummaryViewModelProvider)).put("com.hackernews.futuristic.ui.search.QuantumSearchViewModel", ((Provider) quantumSearchViewModelProvider)).put("com.hackernews.futuristic.ui.search.SearchViewModel", ((Provider) searchViewModelProvider)).put("com.hackernews.futuristic.ui.settings.SettingsViewModel", ((Provider) settingsViewModelProvider)).put("com.hackernews.futuristic.ui.stories.StoriesViewModel", ((Provider) storiesViewModelProvider)).put("com.hackernews.futuristic.ui.detail.StoryDetailViewModel", ((Provider) storyDetailViewModelProvider)).build();
+      return MapBuilder.<String, Provider<ViewModel>>newMapBuilder(10).put("com.hackernews.futuristic.ui.bookmarks.BookmarksViewModel", ((Provider) bookmarksViewModelProvider)).put("com.hackernews.futuristic.ui.search.CrashProofSearchViewModel", ((Provider) crashProofSearchViewModelProvider)).put("com.hackernews.futuristic.ui.summary.DailySummaryViewModel", ((Provider) dailySummaryViewModelProvider)).put("com.hackernews.futuristic.ui.search.QuantumSearchViewModel", ((Provider) quantumSearchViewModelProvider)).put("com.hackernews.futuristic.ui.search.SearchViewModel", ((Provider) searchViewModelProvider)).put("com.hackernews.futuristic.ui.settings.SettingsViewModel", ((Provider) settingsViewModelProvider)).put("com.hackernews.futuristic.ui.search.SimpleSearchViewModel", ((Provider) simpleSearchViewModelProvider)).put("com.hackernews.futuristic.ui.stories.StoriesViewModel", ((Provider) storiesViewModelProvider)).put("com.hackernews.futuristic.ui.detail.StoryDetailViewModel", ((Provider) storyDetailViewModelProvider)).put("com.hackernews.futuristic.ui.user.UserProfileViewModel", ((Provider) userProfileViewModelProvider)).build();
     }
 
     private static final class SwitchingProvider<T> implements Provider<T> {
@@ -516,23 +543,35 @@ public final class DaggerNeonFeedApplication_HiltComponents_SingletonC {
       @Override
       public T get() {
         switch (id) {
-          case 0: // com.hackernews.futuristic.ui.summary.DailySummaryViewModel 
-          return (T) new DailySummaryViewModel(singletonCImpl.hackerNewsRepositoryProvider.get(), singletonCImpl.neuralSynthesizerProvider.get());
+          case 0: // com.hackernews.futuristic.ui.bookmarks.BookmarksViewModel 
+          return (T) new BookmarksViewModel(singletonCImpl.hackerNewsRepositoryProvider.get());
 
-          case 1: // com.hackernews.futuristic.ui.search.QuantumSearchViewModel 
+          case 1: // com.hackernews.futuristic.ui.search.CrashProofSearchViewModel 
+          return (T) new CrashProofSearchViewModel(singletonCImpl.hackerNewsRepositoryProvider.get());
+
+          case 2: // com.hackernews.futuristic.ui.summary.DailySummaryViewModel 
+          return (T) new DailySummaryViewModel(singletonCImpl.hackerNewsRepositoryProvider.get(), singletonCImpl.neuralSynthesizerProvider.get(), singletonCImpl.provideCloudLLMServiceProvider.get(), singletonCImpl.provideGeminiApiServiceProvider.get());
+
+          case 3: // com.hackernews.futuristic.ui.search.QuantumSearchViewModel 
           return (T) new QuantumSearchViewModel(singletonCImpl.hackerNewsRepositoryProvider.get(), singletonCImpl.quantumSearchEngineProvider.get());
 
-          case 2: // com.hackernews.futuristic.ui.search.SearchViewModel 
+          case 4: // com.hackernews.futuristic.ui.search.SearchViewModel 
           return (T) new SearchViewModel(singletonCImpl.hackerNewsRepositoryProvider.get());
 
-          case 3: // com.hackernews.futuristic.ui.settings.SettingsViewModel 
-          return (T) new SettingsViewModel();
+          case 5: // com.hackernews.futuristic.ui.settings.SettingsViewModel 
+          return (T) new SettingsViewModel(singletonCImpl.settingsRepositoryProvider.get());
 
-          case 4: // com.hackernews.futuristic.ui.stories.StoriesViewModel 
-          return (T) new StoriesViewModel(singletonCImpl.hackerNewsRepositoryProvider.get(), singletonCImpl.neuralNetworkAnalyzerProvider.get(), singletonCImpl.userProfileManagerProvider.get());
+          case 6: // com.hackernews.futuristic.ui.search.SimpleSearchViewModel 
+          return (T) new SimpleSearchViewModel(singletonCImpl.hackerNewsRepositoryProvider.get());
 
-          case 5: // com.hackernews.futuristic.ui.detail.StoryDetailViewModel 
+          case 7: // com.hackernews.futuristic.ui.stories.StoriesViewModel 
+          return (T) new StoriesViewModel(singletonCImpl.hackerNewsRepositoryProvider.get(), singletonCImpl.neuralNetworkAnalyzerProvider.get(), singletonCImpl.userProfileManagerProvider.get(), singletonCImpl.settingsRepositoryProvider.get());
+
+          case 8: // com.hackernews.futuristic.ui.detail.StoryDetailViewModel 
           return (T) new StoryDetailViewModel(singletonCImpl.hackerNewsRepositoryProvider.get(), singletonCImpl.commentThreadAnalyzerProvider.get());
+
+          case 9: // com.hackernews.futuristic.ui.user.UserProfileViewModel 
+          return (T) new UserProfileViewModel(singletonCImpl.hackerNewsRepositoryProvider.get());
 
           default: throw new AssertionError(id);
         }
@@ -629,7 +668,13 @@ public final class DaggerNeonFeedApplication_HiltComponents_SingletonC {
 
     private Provider<NeuralSynthesizer> neuralSynthesizerProvider;
 
+    private Provider<CloudLLMService> provideCloudLLMServiceProvider;
+
+    private Provider<GeminiApiService> provideGeminiApiServiceProvider;
+
     private Provider<QuantumSearchEngine> quantumSearchEngineProvider;
+
+    private Provider<SettingsRepository> settingsRepositoryProvider;
 
     private Provider<NeuralNetworkAnalyzer> neuralNetworkAnalyzerProvider;
 
@@ -655,6 +700,10 @@ public final class DaggerNeonFeedApplication_HiltComponents_SingletonC {
       return DatabaseModule_ProvideCommentDaoFactory.provideCommentDao(provideHackerNewsDatabaseProvider.get());
     }
 
+    private BookmarkDao bookmarkDao() {
+      return DatabaseModule_ProvideBookmarkDaoFactory.provideBookmarkDao(provideHackerNewsDatabaseProvider.get());
+    }
+
     @SuppressWarnings("unchecked")
     private void initialize(final ApplicationContextModule applicationContextModuleParam) {
       this.workManagerSchedulerProvider = DoubleCheck.provider(new SwitchingProvider<WorkManagerScheduler>(singletonCImpl, 0));
@@ -665,10 +714,13 @@ public final class DaggerNeonFeedApplication_HiltComponents_SingletonC {
       this.provideHackerNewsDatabaseProvider = DoubleCheck.provider(new SwitchingProvider<HackerNewsDatabase>(singletonCImpl, 6));
       this.hackerNewsRepositoryProvider = DoubleCheck.provider(new SwitchingProvider<HackerNewsRepository>(singletonCImpl, 1));
       this.neuralSynthesizerProvider = DoubleCheck.provider(new SwitchingProvider<NeuralSynthesizer>(singletonCImpl, 7));
-      this.quantumSearchEngineProvider = DoubleCheck.provider(new SwitchingProvider<QuantumSearchEngine>(singletonCImpl, 8));
-      this.neuralNetworkAnalyzerProvider = DoubleCheck.provider(new SwitchingProvider<NeuralNetworkAnalyzer>(singletonCImpl, 9));
-      this.userProfileManagerProvider = DoubleCheck.provider(new SwitchingProvider<UserProfileManager>(singletonCImpl, 10));
-      this.commentThreadAnalyzerProvider = DoubleCheck.provider(new SwitchingProvider<CommentThreadAnalyzer>(singletonCImpl, 11));
+      this.provideCloudLLMServiceProvider = DoubleCheck.provider(new SwitchingProvider<CloudLLMService>(singletonCImpl, 8));
+      this.provideGeminiApiServiceProvider = DoubleCheck.provider(new SwitchingProvider<GeminiApiService>(singletonCImpl, 9));
+      this.quantumSearchEngineProvider = DoubleCheck.provider(new SwitchingProvider<QuantumSearchEngine>(singletonCImpl, 10));
+      this.settingsRepositoryProvider = DoubleCheck.provider(new SwitchingProvider<SettingsRepository>(singletonCImpl, 11));
+      this.neuralNetworkAnalyzerProvider = DoubleCheck.provider(new SwitchingProvider<NeuralNetworkAnalyzer>(singletonCImpl, 12));
+      this.userProfileManagerProvider = DoubleCheck.provider(new SwitchingProvider<UserProfileManager>(singletonCImpl, 13));
+      this.commentThreadAnalyzerProvider = DoubleCheck.provider(new SwitchingProvider<CommentThreadAnalyzer>(singletonCImpl, 14));
     }
 
     @Override
@@ -715,7 +767,7 @@ public final class DaggerNeonFeedApplication_HiltComponents_SingletonC {
           return (T) new WorkManagerScheduler(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
 
           case 1: // com.hackernews.futuristic.data.repository.HackerNewsRepository 
-          return (T) new HackerNewsRepository(singletonCImpl.provideHackerNewsApiProvider.get(), singletonCImpl.storyDao(), singletonCImpl.commentDao());
+          return (T) new HackerNewsRepository(singletonCImpl.provideHackerNewsApiProvider.get(), singletonCImpl.storyDao(), singletonCImpl.commentDao(), singletonCImpl.bookmarkDao());
 
           case 2: // com.hackernews.futuristic.data.api.HackerNewsApi 
           return (T) NetworkModule_ProvideHackerNewsApiFactory.provideHackerNewsApi(singletonCImpl.provideRetrofitProvider.get());
@@ -735,16 +787,25 @@ public final class DaggerNeonFeedApplication_HiltComponents_SingletonC {
           case 7: // com.hackernews.futuristic.data.analyzer.NeuralSynthesizer 
           return (T) new NeuralSynthesizer();
 
-          case 8: // com.hackernews.futuristic.data.analyzer.QuantumSearchEngine 
+          case 8: // com.hackernews.futuristic.data.service.CloudLLMService 
+          return (T) NetworkModule_ProvideCloudLLMServiceFactory.provideCloudLLMService();
+
+          case 9: // com.hackernews.futuristic.data.service.GeminiApiService 
+          return (T) NetworkModule_ProvideGeminiApiServiceFactory.provideGeminiApiService(singletonCImpl.provideGsonProvider.get());
+
+          case 10: // com.hackernews.futuristic.data.analyzer.QuantumSearchEngine 
           return (T) new QuantumSearchEngine();
 
-          case 9: // com.hackernews.futuristic.data.analyzer.NeuralNetworkAnalyzer 
+          case 11: // com.hackernews.futuristic.data.repository.SettingsRepository 
+          return (T) new SettingsRepository(ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
+
+          case 12: // com.hackernews.futuristic.data.analyzer.NeuralNetworkAnalyzer 
           return (T) new NeuralNetworkAnalyzer();
 
-          case 10: // com.hackernews.futuristic.data.profile.UserProfileManager 
+          case 13: // com.hackernews.futuristic.data.profile.UserProfileManager 
           return (T) new UserProfileManager();
 
-          case 11: // com.hackernews.futuristic.data.analyzer.CommentThreadAnalyzer 
+          case 14: // com.hackernews.futuristic.data.analyzer.CommentThreadAnalyzer 
           return (T) new CommentThreadAnalyzer();
 
           default: throw new AssertionError(id);

@@ -41,8 +41,7 @@ data class TimeRange(
 )
 
 enum class RelativeTimeRange(val displayName: String, val hours: Long) {
-    LAST_HOUR("Last Hour", 1),
-    LAST_DAY("Last Day", 24),
+    TODAY("Today", 24),
     LAST_WEEK("Last Week", 168),
     LAST_MONTH("Last Month", 720),
     LAST_YEAR("Last Year", 8760),

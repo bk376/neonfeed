@@ -57,14 +57,32 @@
 
 ## 🚀 Quick Start
 
-### Prerequisites
+### 📱 Try the App (No Setup Required)
+**Download the latest APK and install directly on your Android device:**
+
+[![Download APK](https://img.shields.io/badge/Download-APK%20(19MB)-success.svg?style=for-the-badge&logo=android)](./releases/neonfeed-v1.0.0.apk)
+
+**Requirements:**
+- Android 7.0+ (API 24)
+- ~20MB storage space
+- Internet connection for live news feeds
+
+**Installation Steps:**
+1. Download [`neonfeed-v1.0.0.apk`](./releases/neonfeed-v1.0.0.apk)
+2. Enable "Install from Unknown Sources" in your Android settings
+3. Open the APK file and install
+4. Launch NeonFeed and enjoy the cyberpunk news experience!
+
+### 🛠️ Build from Source
+
+**Prerequisites:**
 - Android Studio Arctic Fox or newer
 - Kotlin 1.9.0+
 - Android SDK 24+ (Android 7.0)
 
-### Installation
+**Steps:**
 ```bash
-git clone https://github.com/your-username/neonfeed.git
+git clone https://github.com/bk376/neonfeed.git
 cd neonfeed
 ./gradlew assembleDebug
 ```
@@ -99,50 +117,6 @@ Enable advanced AI features in Settings:
 - Controversy detection
 - Reading pattern optimization
 
-## 🎯 Current Milestones
-
-### ✅ **Phase 1: Foundation (Completed)**
-- [x] Real Hacker News API integration
-- [x] Offline-first architecture with Room database
-- [x] Cyberpunk UI with Jetpack Compose
-- [x] Background synchronization with WorkManager
-- [x] MVVM architecture with Hilt DI
-
-### ✅ **Phase 2: Intelligence (Completed)**
-- [x] Neural story analysis engine
-- [x] Predictive content filtering
-- [x] Quantum search algorithms
-- [x] User profiling and personalization
-
-## 🔮 Future Roadmap
-
-### 🚧 **Phase 3: Advanced Features (Q1 2025)**
-- [ ] **Push Notifications** - Smart alerts for trending stories
-- [ ] **Social Features** - Share stories with encrypted messaging
-- [ ] **Voice Interface** - Neural voice commands and story narration
-- [ ] **AR Story Visualization** - Augmented reality story previews
-- [ ] **Blockchain Integration** - Decentralized story verification
-
-### 🌟 **Phase 4: AI Evolution (Q2 2025)**
-- [ ] **GPT Integration** - AI-generated story summaries
-- [ ] **Sentiment Prediction** - Forecast comment thread mood
-- [ ] **Personalized Feed Curation** - ML-optimized story ranking
-- [ ] **Cross-Platform Analytics** - Web and desktop companion apps
-- [ ] **Real-time Translation** - Neural translation for global content
-
-### 🚀 **Phase 5: Neural Network (Q3 2025)**
-- [ ] **Distributed Computing** - P2P content analysis network
-- [ ] **Quantum Search 2.0** - Advanced multi-dimensional algorithms
-- [ ] **Neural Interfaces** - Brain-computer interface prototypes
-- [ ] **Holographic Displays** - True 3D content visualization
-- [ ] **Time-based Analytics** - Predict viral content before it trends
-
-### 🌈 **Phase 6: Metaverse Integration (Q4 2025)**
-- [ ] **VR Story Environments** - Immersive news consumption
-- [ ] **3D Comment Threads** - Spatial discussion visualization
-- [ ] **Avatar Interactions** - Virtual personas for anonymous engagement
-- [ ] **Neural Marketplace** - Decentralized content economy
-- [ ] **Quantum Networking** - Ultra-secure communication protocols
 
 ## 🧠 AI & Machine Learning Features
 
@@ -192,11 +166,6 @@ We welcome contributions from cyberpunk enthusiasts and Android developers!
 | Cache Hit Rate | >90% | 94% |
 | Neural Analysis | <3s | 2.1s |
 
-## 🏆 Awards & Recognition
-
-- **Best Cyberpunk Mobile App** - TechCrunch Disrupt 2024
-- **Innovation in AI-Driven UX** - Google I/O Extended 2024
-- **Open Source Excellence** - Kotlin Multiplatform Awards 2024
 
 ## 📄 License
 
@@ -217,6 +186,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 *"In a world of information overload, NeonFeed cuts through the noise with neural precision"*
 
-[⭐ Star us on GitHub](https://github.com/your-username/neonfeed) • [🚀 Download APK](https://github.com/your-username/neonfeed/releases) • [📱 Google Play](https://play.google.com/store/apps/details?id=com.hackernews.futuristic)
+[⭐ Star us on GitHub](https://github.com/bk376/neonfeed) • [🚀 Download APK](https://github.com/bk376/neonfeed/blob/master/releases/neonfeed-v1.0.0.apk)
 
 </div>

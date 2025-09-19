@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Reference - NeonFeed Documentation</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <nav class="container">
+            <a href="index.html" class="logo">NEONFEED</a>
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="api-reference.html" class="active">API Reference</a></li>
+                <li><a href="neural-analysis.html">Neural Analysis</a></li>
+                <li><a href="quantum-search.html">Quantum Search</a></li>
+                <li><a href="architecture.html">Architecture</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main class="container">
+        <h1>📡 API Reference</h1>
+        
+        <section class="api-section">
+            <h2>Core Repository Methods</h2>
+            
+            <div class="api-method">
+                <h3>getTopStories(limit: Int = 30)</h3>
+                <p>Fetches top stories from Hacker News with caching support.</p>
+                <div class="code-block">
+                    <code>
+suspend fun getTopStories(limit: Int = 30): Result&lt;List&lt;Story&gt;&gt;<br><br>
+
+// Usage<br>
+val result = repository.getTopStories(50)<br>
+result.fold(<br>
+&nbsp;&nbsp;onSuccess = { stories -> updateUI(stories) },<br>
+&nbsp;&nbsp;onFailure = { error -> handleError(error) }<br>
+)
+                    </code>
+                </div>
+            </div>
+
+            <div class="api-method">
+                <h3>getComments(commentIds: List&lt;Long&gt;)</h3>
+                <p>Retrieves comments with intelligent caching and batching.</p>
+                <div class="code-block">
+                    <code>
+suspend fun getComments(commentIds: List&lt;Long&gt;): Result&lt;List&lt;Comment&gt;&gt;<br><br>
+
+// Usage<br>
+val comments = repository.getComments(story.kids ?: emptyList())<br>
+comments.getOrNull()?.let { commentList -><br>
+&nbsp;&nbsp;displayComments(commentList)<br>
+}
+                    </code>
+                </div>
+            </div>
+        </section>
+
+        <section class="api-section">
+            <h2>Neural Analysis API</h2>
+            
+            <div class="api-method">
+                <h3>analyzeStory(story: Story)</h3>
+                <p>Performs comprehensive AI analysis on story content.</p>
+                <div class="code-block">
+                    <code>
+suspend fun analyzeStory(story: Story): StoryAnalysis<br><br>
+
+// Returns StoryAnalysis with:<br>
+data class StoryAnalysis(<br>
+&nbsp;&nbsp;val sentimentScore: Float,        // -1.0 to 1.0<br>
+&nbsp;&nbsp;val topicClassification: Topic,<br>
+&nbsp;&nbsp;val controversyLevel: Float,      // 0.0 to 1.0<br>
+&nbsp;&nbsp;val threatLevel: ThreatLevel,<br>
+&nbsp;&nbsp;val keywords: List&lt;String&gt;,<br>
+&nbsp;&nbsp;val confidence: Float<br>
+)
+                    </code>
+                </div>
+            </div>
+        </section>
+
+        <section class="api-section">
+            <h2>Quantum Search API</h2>
+            
+            <div class="api-method">
+                <h3>search(query: QuantumSearchQuery, stories: List&lt;Story&gt;)</h3>
+                <p>Multi-dimensional probabilistic search with AI enhancement.</p>
+                <div class="code-block">
+                    <code>
+suspend fun search(<br>
+&nbsp;&nbsp;query: QuantumSearchQuery,<br>
+&nbsp;&nbsp;stories: List&lt;Story&gt;<br>
+): QuantumSearchResult<br><br>
+
+// Query configuration<br>
+val query = QuantumSearchQuery(<br>
+&nbsp;&nbsp;query = "artificial intelligence",<br>
+&nbsp;&nbsp;searchDimensions = listOf(<br>
+&nbsp;&nbsp;&nbsp;&nbsp;SearchDimension.TITLE,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;SearchDimension.CONTENT,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;SearchDimension.SENTIMENT<br>
+&nbsp;&nbsp;),<br>
+&nbsp;&nbsp;probabilityThreshold = 0.7f<br>
+)
+                    </code>
+                </div>
+            </div>
+        </section>
+
+        <section class="api-section">
+            <h2>Configuration</h2>
+            
+            <div class="api-method">
+                <h3>Cache Configuration</h3>
+                <div class="code-block">
+                    <code>
+// Room Database settings<br>
+companion object {<br>
+&nbsp;&nbsp;private const val CACHE_EXPIRY_TIME = 5 * 60 * 1000L // 5 minutes<br>
+}<br><br>
+
+// Custom cache settings<br>
+@Query("SELECT * FROM stories WHERE fetchedAt > :cutoffTime")<br>
+suspend fun getFreshStories(cutoffTime: Long): List&lt;StoryEntity&gt;
+                    </code>
+                </div>
+            </div>
+
+            <div class="api-method">
+                <h3>WorkManager Scheduling</h3>
+                <div class="code-block">
+                    <code>
+// Daily background sync<br>
+val dailySummaryRequest = PeriodicWorkRequestBuilder&lt;DailySummaryWorker&gt;(<br>
+&nbsp;&nbsp;24, TimeUnit.HOURS,<br>
+&nbsp;&nbsp;2, TimeUnit.HOURS // Flex interval<br>
+)<br>
+.setConstraints(<br>
+&nbsp;&nbsp;Constraints.Builder()<br>
+&nbsp;&nbsp;&nbsp;&nbsp;.setRequiredNetworkType(NetworkType.CONNECTED)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;.setRequiresBatteryNotLow(true)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;.build()<br>
+)<br>
+.build()
+                    </code>
+                </div>
+            </div>
+        </section>
+    </main>
+</body>
+</html>

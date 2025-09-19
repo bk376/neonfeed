@@ -3,6 +3,7 @@ package com.hackernews.futuristic.di
 import android.content.Context
 import androidx.room.Room
 import com.hackernews.futuristic.data.local.HackerNewsDatabase
+import com.hackernews.futuristic.data.local.dao.BookmarkDao
 import com.hackernews.futuristic.data.local.dao.CommentDao
 import com.hackernews.futuristic.data.local.dao.StoryDao
 import dagger.Module
@@ -36,5 +37,10 @@ object DatabaseModule {
     @Provides
     fun provideCommentDao(database: HackerNewsDatabase): CommentDao {
         return database.commentDao()
+    }
+    
+    @Provides
+    fun provideBookmarkDao(database: HackerNewsDatabase): BookmarkDao {
+        return database.bookmarkDao()
     }
 }

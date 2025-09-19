@@ -15,10 +15,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -584,6 +587,8 @@ fun QuantumProbabilitySlider(
 fun QuantumSearchResults(
     searchResult: QuantumSearchResult,
     onStoryClick: (Story) -> Unit,
+    isBookmarked: (Long) -> Boolean = { false },
+    onBookmarkClick: ((Story) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier) {
@@ -617,14 +622,34 @@ fun QuantumSearchResults(
             Spacer(modifier = Modifier.height(16.dp))
         }
         
-        // Results
-        Text(
-            text = "QUANTUM SEARCH RESULTS (${searchResult.stories.size})",
-            color = NeonBlue,
-            fontSize = 16.sp,
-            fontFamily = MonospaceFont,
-            fontWeight = FontWeight.Bold
-        )
+        // Results header with enhanced count display
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "SEARCH RESULTS",
+                color = NeonBlue,
+                fontSize = 16.sp,
+                fontFamily = MonospaceFont,
+                fontWeight = FontWeight.Bold
+            )
+            
+            Card(
+                colors = CardDefaults.cardColors(containerColor = NeonBlue.copy(alpha = 0.2f)),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text(
+                    text = "${searchResult.stories.size} FOUND",
+                    color = NeonBlue,
+                    fontSize = 10.sp,
+                    fontFamily = MonospaceFont,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                )
+            }
+        }
         
         Spacer(modifier = Modifier.height(8.dp))
         
@@ -634,7 +659,9 @@ fun QuantumSearchResults(
             items(searchResult.stories) { story ->
                 QuantumStoryCard(
                     story = story,
-                    onClick = { onStoryClick(story) }
+                    onClick = { onStoryClick(story) },
+                    isBookmarked = isBookmarked(story.id),
+                    onBookmarkClick = onBookmarkClick?.let { { it(story) } }
                 )
             }
         }
@@ -968,6 +995,8 @@ private fun DrawScope.drawSearchPaths(
 fun QuantumStoryCard(
     story: Story,
     onClick: () -> Unit,
+    isBookmarked: Boolean = false,
+    onBookmarkClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val cardColor by animateColorAsState(
@@ -1035,25 +1064,141 @@ fun QuantumStoryCard(
                     }
                 }
                 
-                // Quantum relevance indicator
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Icon(
-                        Icons.Default.TrendingUp,
-                        contentDescription = "Quantum Relevance",
-                        tint = NeonGreen,
-                        modifier = Modifier.size(12.dp)
-                    )
-                    Text(
-                        text = "QUANTUM MATCH",
-                        color = NeonGreen,
-                        fontSize = 8.sp,
-                        fontFamily = MonospaceFont,
-                        fontWeight = FontWeight.Bold
-                    )
+                    // Quantum relevance indicator
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.TrendingUp,
+                            contentDescription = "Quantum Relevance",
+                            tint = NeonGreen,
+                            modifier = Modifier.size(12.dp)
+                        )
+                        Text(
+                            text = "QUANTUM MATCH",
+                            color = NeonGreen,
+                            fontSize = 8.sp,
+                            fontFamily = MonospaceFont,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    
+                    // Bookmark button
+                    onBookmarkClick?.let { bookmarkClickHandler ->
+                        IconButton(
+                            onClick = bookmarkClickHandler,
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                                contentDescription = if (isBookmarked) "Remove bookmark" else "Add bookmark",
+                                tint = if (isBookmarked) NeonYellow else NeonCyan.copy(alpha = 0.7f),
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
                 }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TimeRangeDropdown(
+    selectedTimeRange: RelativeTimeRange,
+    onTimeRangeChange: (RelativeTimeRange) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+    
+    Box(modifier = modifier) {
+        Card(
+            modifier = Modifier
+                .clickable { expanded = true }
+                .border(
+                    1.dp,
+                    NeonCyan.copy(alpha = 0.5f),
+                    RoundedCornerShape(8.dp)
+                ),
+            colors = CardDefaults.cardColors(containerColor = DarkCard),
+            shape = RoundedCornerShape(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    Icons.Default.Schedule,
+                    contentDescription = "Time Range",
+                    tint = NeonCyan,
+                    modifier = Modifier.size(16.dp)
+                )
+                
+                Text(
+                    text = selectedTimeRange.displayName,
+                    color = NeonCyan,
+                    fontSize = 12.sp,
+                    fontFamily = MonospaceFont,
+                    fontWeight = FontWeight.Bold
+                )
+                
+                Text(
+                    text = "▼",
+                    color = NeonCyan.copy(alpha = 0.7f),
+                    fontSize = 10.sp,
+                    fontFamily = MonospaceFont
+                )
+            }
+        }
+        
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.background(
+                color = DarkBackground,
+                shape = RoundedCornerShape(8.dp)
+            )
+        ) {
+            RelativeTimeRange.values().forEach { timeRange ->
+                DropdownMenuItem(
+                    text = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .background(
+                                        if (timeRange == selectedTimeRange) NeonCyan else Color.Transparent,
+                                        CircleShape
+                                    )
+                            )
+                            
+                            Text(
+                                text = timeRange.displayName,
+                                color = if (timeRange == selectedTimeRange) NeonCyan else LightText,
+                                fontSize = 12.sp,
+                                fontFamily = MonospaceFont,
+                                fontWeight = if (timeRange == selectedTimeRange) FontWeight.Bold else FontWeight.Normal
+                            )
+                        }
+                    },
+                    onClick = {
+                        onTimeRangeChange(timeRange)
+                        expanded = false
+                    },
+                    modifier = Modifier.background(
+                        if (timeRange == selectedTimeRange) NeonCyan.copy(alpha = 0.1f) else Color.Transparent
+                    )
+                )
             }
         }
     }

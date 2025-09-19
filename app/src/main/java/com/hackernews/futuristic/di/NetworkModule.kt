@@ -1,6 +1,9 @@
 package com.hackernews.futuristic.di
 
 import com.hackernews.futuristic.data.api.HackerNewsApi
+import com.hackernews.futuristic.data.service.CloudLLMService
+import com.hackernews.futuristic.data.service.ClaudeApiService
+import com.hackernews.futuristic.data.service.GeminiApiService
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import dagger.Module
@@ -13,6 +16,7 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
+import javax.inject.Qualifier
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -58,5 +62,23 @@ object NetworkModule {
     @Singleton
     fun provideHackerNewsApi(retrofit: Retrofit): HackerNewsApi {
         return retrofit.create(HackerNewsApi::class.java)
+    }
+    
+    @Provides
+    @Singleton
+    fun provideCloudLLMService(): CloudLLMService {
+        return CloudLLMService()
+    }
+    
+    @Provides
+    @Singleton
+    fun provideClaudeApiService(gson: Gson): ClaudeApiService {
+        return ClaudeApiService(gson)
+    }
+    
+    @Provides
+    @Singleton
+    fun provideGeminiApiService(gson: Gson): GeminiApiService {
+        return GeminiApiService(gson)
     }
 }

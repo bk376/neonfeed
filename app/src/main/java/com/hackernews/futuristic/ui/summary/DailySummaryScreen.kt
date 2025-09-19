@@ -34,6 +34,7 @@ import com.hackernews.futuristic.ui.theme.*
 fun DailySummaryScreen(
     onBackClick: () -> Unit,
     onStoryClick: (Story) -> Unit,
+    onAuthorClick: ((String) -> Unit)? = null,
     onScrollToTopCallback: ((suspend () -> Unit) -> Unit)? = null,
     viewModel: DailySummaryViewModel = hiltViewModel()
 ) {
@@ -152,7 +153,8 @@ fun DailySummaryScreen(
                     item {
                         TopStoriesSection(
                             stories = uiState.summary!!.topStories,
-                            onStoryClick = onStoryClick
+                            onStoryClick = onStoryClick,
+                            onAuthorClick = onAuthorClick
                         )
                     }
                     
@@ -246,7 +248,8 @@ private fun DailySummaryHeader(summary: DailySummary) {
 @Composable
 private fun TopStoriesSection(
     stories: List<Story>,
-    onStoryClick: (Story) -> Unit
+    onStoryClick: (Story) -> Unit,
+    onAuthorClick: ((String) -> Unit)? = null
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -269,7 +272,8 @@ private fun TopStoriesSection(
                 TopStoryCard(
                     story = story,
                     rank = index + 1,
-                    onClick = { onStoryClick(story) }
+                    onClick = { onStoryClick(story) },
+                    onAuthorClick = onAuthorClick
                 )
             }
         }
@@ -280,7 +284,8 @@ private fun TopStoriesSection(
 private fun TopStoryCard(
     story: Story,
     rank: Int,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onAuthorClick: ((String) -> Unit)? = null
 ) {
     Card(
         modifier = Modifier
@@ -354,9 +359,14 @@ private fun TopStoryCard(
                     story.by?.let { author ->
                         Text(
                             text = "👤 $author",
-                            color = TextSecondary,
+                            color = if (onAuthorClick != null) NeonCyan else TextSecondary,
                             fontSize = 10.sp,
-                            fontFamily = MonospaceFont
+                            fontFamily = MonospaceFont,
+                            modifier = if (onAuthorClick != null) {
+                                Modifier.clickable { onAuthorClick(author) }
+                            } else {
+                                Modifier
+                            }
                         )
                     }
                 }
@@ -636,7 +646,10 @@ private fun AppOpportunitySection(
                     colors = ButtonDefaults.buttonColors(
                         containerColor = if (opportunity.isAccepted) NeonGreen else NeonGold,
                         contentColor = androidx.compose.ui.graphics.Color.Black
-                    )
+                    ),
+                    modifier = Modifier
+                        .height(44.dp)
+                        .widthIn(min = 140.dp)
                 ) {
                     Text(
                         text = if (opportunity.isAccepted) "✓ ACCEPTED" else "SCOUT THIS APP",

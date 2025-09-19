@@ -1,12 +1,15 @@
 package com.hackernews.futuristic.data.repository
 
 import com.hackernews.futuristic.data.api.HackerNewsApi
+import com.hackernews.futuristic.data.local.dao.BookmarkDao
 import com.hackernews.futuristic.data.local.dao.CommentDao
 import com.hackernews.futuristic.data.local.dao.StoryDao
+import com.hackernews.futuristic.data.local.entities.BookmarkEntity
 import com.hackernews.futuristic.data.local.entities.toDomainModel
 import com.hackernews.futuristic.data.local.entities.toEntity
 import com.hackernews.futuristic.data.model.Comment
 import com.hackernews.futuristic.data.model.Story
+import com.hackernews.futuristic.data.api.User
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -19,7 +22,8 @@ import javax.inject.Singleton
 class HackerNewsRepository @Inject constructor(
     private val api: HackerNewsApi,
     private val storyDao: StoryDao,
-    private val commentDao: CommentDao
+    private val commentDao: CommentDao,
+    private val bookmarkDao: BookmarkDao
 ) {
     
     companion object {
@@ -285,5 +289,158 @@ class HackerNewsRepository @Inject constructor(
                 }
             }
         }.awaitAll().filterNotNull()
+    }
+    
+    // Bookmark methods
+    suspend fun bookmarkStory(story: Story): Result<Unit> {
+        return try {
+            val bookmarkEntity = BookmarkEntity(
+                storyId = story.id,
+                title = story.title ?: "",
+                url = story.url,
+                by = story.by ?: "",
+                time = story.time,
+                score = story.score ?: 0,
+                descendants = story.descendants ?: 0
+            )
+            bookmarkDao.insertBookmark(bookmarkEntity)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+    
+    suspend fun removeBookmark(storyId: Long): Result<Unit> {
+        return try {
+            bookmarkDao.deleteBookmarkById(storyId)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+    
+    suspend fun isBookmarked(storyId: Long): Boolean {
+        return try {
+            bookmarkDao.isBookmarked(storyId)
+        } catch (e: Exception) {
+            false
+        }
+    }
+    
+    fun getBookmarkedStories(): Flow<List<Story>> {
+        return bookmarkDao.getAllBookmarks().map { bookmarks ->
+            bookmarks.map { bookmark ->
+                Story(
+                    id = bookmark.storyId,
+                    title = bookmark.title,
+                    url = bookmark.url,
+                    by = bookmark.by,
+                    time = bookmark.time,
+                    score = bookmark.score,
+                    descendants = bookmark.descendants,
+                    text = null,
+                    kids = null,
+                    type = "story"
+                )
+            }
+        }
+    }
+    
+    suspend fun getBookmarkCount(): Int {
+        return try {
+            bookmarkDao.getBookmarkCount()
+        } catch (e: Exception) {
+            0
+        }
+    }
+    
+    // User profile methods
+    suspend fun getUser(username: String): Result<User> {
+        return try {
+            val response = api.getUser(username)
+            if (response.isSuccessful) {
+                response.body()?.let { user ->
+                    Result.success(user)
+                } ?: Result.failure(Exception("User not found"))
+            } else {
+                Result.failure(Exception("Failed to fetch user: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+    
+    suspend fun getUserSubmissions(username: String, limit: Int = 20): Result<List<Story>> {
+        return try {
+            val userResult = getUser(username)
+            userResult.fold(
+                onSuccess = { user ->
+                    val submissionIds = user.submitted?.take(limit * 2) ?: emptyList() // Get more to filter
+                    if (submissionIds.isNotEmpty()) {
+                        // Filter for actual stories (not comments)
+                        val stories = mutableListOf<Story>()
+                        submissionIds.forEach { id ->
+                            try {
+                                val response = api.getItem(id)
+                                if (response.isSuccessful) {
+                                    response.body()?.let { item ->
+                                        // Only add if it's a story (has title and type is "story")
+                                        if (item.type == "story" && !item.title.isNullOrBlank()) {
+                                            stories.add(item)
+                                            if (stories.size >= limit) return@forEach
+                                        }
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                // Skip failed items
+                            }
+                        }
+                        Result.success(stories)
+                    } else {
+                        Result.success(emptyList())
+                    }
+                },
+                onFailure = { error ->
+                    Result.failure(error)
+                }
+            )
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+    
+    suspend fun getUserComments(username: String, limit: Int = 20): Result<List<Comment>> {
+        return try {
+            val userResult = getUser(username)
+            userResult.fold(
+                onSuccess = { user ->
+                    val submissionIds = user.submitted?.take(limit * 2) ?: emptyList() // Get more to filter
+                    // Filter for comments (items that are not stories)
+                    val comments = mutableListOf<Comment>()
+                    submissionIds.forEach { id ->
+                        try {
+                            val response = api.getComment(id)
+                            if (response.isSuccessful) {
+                                response.body()?.let { comment ->
+                                    // Only add if it's actually a comment (has text and type is "comment")
+                                    if (comment.type == "comment" && !comment.text.isNullOrBlank()) {
+                                        comments.add(comment)
+                                        if (comments.size >= limit) return@forEach
+                                    }
+                                }
+                            }
+                        } catch (e: Exception) {
+                            // Skip failed comments
+                        }
+                    }
+                    Result.success(comments)
+                },
+                onFailure = { error ->
+                    Result.failure(error)
+                }
+            )
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 }

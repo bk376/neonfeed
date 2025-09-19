@@ -2,6 +2,8 @@ package com.hackernews.futuristic.ui.summary;
 
 import com.hackernews.futuristic.data.analyzer.NeuralSynthesizer;
 import com.hackernews.futuristic.data.repository.HackerNewsRepository;
+import com.hackernews.futuristic.data.service.CloudLLMService;
+import com.hackernews.futuristic.data.service.GeminiApiService;
 import dagger.internal.DaggerGenerated;
 import dagger.internal.Factory;
 import dagger.internal.QualifierMetadata;
@@ -27,25 +29,36 @@ public final class DailySummaryViewModel_Factory implements Factory<DailySummary
 
   private final Provider<NeuralSynthesizer> neuralSynthesizerProvider;
 
+  private final Provider<CloudLLMService> cloudLLMServiceProvider;
+
+  private final Provider<GeminiApiService> geminiApiServiceProvider;
+
   public DailySummaryViewModel_Factory(Provider<HackerNewsRepository> repositoryProvider,
-      Provider<NeuralSynthesizer> neuralSynthesizerProvider) {
+      Provider<NeuralSynthesizer> neuralSynthesizerProvider,
+      Provider<CloudLLMService> cloudLLMServiceProvider,
+      Provider<GeminiApiService> geminiApiServiceProvider) {
     this.repositoryProvider = repositoryProvider;
     this.neuralSynthesizerProvider = neuralSynthesizerProvider;
+    this.cloudLLMServiceProvider = cloudLLMServiceProvider;
+    this.geminiApiServiceProvider = geminiApiServiceProvider;
   }
 
   @Override
   public DailySummaryViewModel get() {
-    return newInstance(repositoryProvider.get(), neuralSynthesizerProvider.get());
+    return newInstance(repositoryProvider.get(), neuralSynthesizerProvider.get(), cloudLLMServiceProvider.get(), geminiApiServiceProvider.get());
   }
 
   public static DailySummaryViewModel_Factory create(
       Provider<HackerNewsRepository> repositoryProvider,
-      Provider<NeuralSynthesizer> neuralSynthesizerProvider) {
-    return new DailySummaryViewModel_Factory(repositoryProvider, neuralSynthesizerProvider);
+      Provider<NeuralSynthesizer> neuralSynthesizerProvider,
+      Provider<CloudLLMService> cloudLLMServiceProvider,
+      Provider<GeminiApiService> geminiApiServiceProvider) {
+    return new DailySummaryViewModel_Factory(repositoryProvider, neuralSynthesizerProvider, cloudLLMServiceProvider, geminiApiServiceProvider);
   }
 
   public static DailySummaryViewModel newInstance(HackerNewsRepository repository,
-      NeuralSynthesizer neuralSynthesizer) {
-    return new DailySummaryViewModel(repository, neuralSynthesizer);
+      NeuralSynthesizer neuralSynthesizer, CloudLLMService cloudLLMService,
+      GeminiApiService geminiApiService) {
+    return new DailySummaryViewModel(repository, neuralSynthesizer, cloudLLMService, geminiApiService);
   }
 }

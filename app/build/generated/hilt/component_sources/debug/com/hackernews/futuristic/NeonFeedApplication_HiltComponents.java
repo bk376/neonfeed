@@ -3,12 +3,16 @@ package com.hackernews.futuristic;
 import androidx.hilt.work.HiltWrapper_WorkerFactoryModule;
 import com.hackernews.futuristic.di.DatabaseModule;
 import com.hackernews.futuristic.di.NetworkModule;
+import com.hackernews.futuristic.ui.bookmarks.BookmarksViewModel_HiltModules;
 import com.hackernews.futuristic.ui.detail.StoryDetailViewModel_HiltModules;
+import com.hackernews.futuristic.ui.search.CrashProofSearchViewModel_HiltModules;
 import com.hackernews.futuristic.ui.search.QuantumSearchViewModel_HiltModules;
 import com.hackernews.futuristic.ui.search.SearchViewModel_HiltModules;
+import com.hackernews.futuristic.ui.search.SimpleSearchViewModel_HiltModules;
 import com.hackernews.futuristic.ui.settings.SettingsViewModel_HiltModules;
 import com.hackernews.futuristic.ui.stories.StoriesViewModel_HiltModules;
 import com.hackernews.futuristic.ui.summary.DailySummaryViewModel_HiltModules;
+import com.hackernews.futuristic.ui.user.UserProfileViewModel_HiltModules;
 import dagger.Binds;
 import dagger.Component;
 import dagger.Module;
@@ -161,6 +165,8 @@ public final class NeonFeedApplication_HiltComponents {
 
   @Subcomponent(
       modules = {
+          BookmarksViewModel_HiltModules.KeyModule.class,
+          CrashProofSearchViewModel_HiltModules.KeyModule.class,
           DailySummaryViewModel_HiltModules.KeyModule.class,
           HiltWrapper_ActivityRetainedComponentManager_LifecycleModule.class,
           ActivityCBuilderModule.class,
@@ -168,8 +174,10 @@ public final class NeonFeedApplication_HiltComponents {
           QuantumSearchViewModel_HiltModules.KeyModule.class,
           SearchViewModel_HiltModules.KeyModule.class,
           SettingsViewModel_HiltModules.KeyModule.class,
+          SimpleSearchViewModel_HiltModules.KeyModule.class,
           StoriesViewModel_HiltModules.KeyModule.class,
-          StoryDetailViewModel_HiltModules.KeyModule.class
+          StoryDetailViewModel_HiltModules.KeyModule.class,
+          UserProfileViewModel_HiltModules.KeyModule.class
       }
   )
   @ActivityRetainedScoped
@@ -205,13 +213,17 @@ public final class NeonFeedApplication_HiltComponents {
 
   @Subcomponent(
       modules = {
+          BookmarksViewModel_HiltModules.BindsModule.class,
+          CrashProofSearchViewModel_HiltModules.BindsModule.class,
           DailySummaryViewModel_HiltModules.BindsModule.class,
           HiltWrapper_HiltViewModelFactory_ViewModelModule.class,
           QuantumSearchViewModel_HiltModules.BindsModule.class,
           SearchViewModel_HiltModules.BindsModule.class,
           SettingsViewModel_HiltModules.BindsModule.class,
+          SimpleSearchViewModel_HiltModules.BindsModule.class,
           StoriesViewModel_HiltModules.BindsModule.class,
-          StoryDetailViewModel_HiltModules.BindsModule.class
+          StoryDetailViewModel_HiltModules.BindsModule.class,
+          UserProfileViewModel_HiltModules.BindsModule.class
       }
   )
   @ViewModelScoped
