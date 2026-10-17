@@ -33,6 +33,8 @@ fun HtmlText(
     style: TextStyle = LocalTextStyle.current,
     color: Color = AppColors.textPrimary,
     maxLines: Int = Int.MAX_VALUE,
+    /** Taps that don't land on a link; ClickableText would otherwise swallow them. */
+    onClick: (() -> Unit)? = null,
     onLinkClick: (String) -> Unit
 ) {
     val linkColor = AppColors.link
@@ -44,7 +46,8 @@ fun HtmlText(
         maxLines = maxLines,
         overflow = TextOverflow.Ellipsis,
         onClick = { offset ->
-            text.getStringAnnotations(URL_TAG, offset, offset).firstOrNull()?.let { onLinkClick(it.item) }
+            val link = text.getStringAnnotations(URL_TAG, offset, offset).firstOrNull()
+            if (link != null) onLinkClick(link.item) else onClick?.invoke()
         }
     )
 }

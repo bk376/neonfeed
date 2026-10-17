@@ -315,10 +315,12 @@ private fun CommentRow(
     val comment = row.node
     val indentLevel = row.depth.coerceAtMost(MAX_INDENT_DEPTH)
 
+    // Tap anywhere on a comment (except links and the author) to collapse/expand it.
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(IntrinsicSize.Min)
+            .clickable(onClick = onToggle)
             .padding(start = 8.dp + (indentLevel * 12).dp, end = 12.dp)
     ) {
         if (row.depth > 0) {
@@ -333,11 +335,8 @@ private fun CommentRow(
         }
 
         Column(modifier = Modifier.padding(vertical = 10.dp)) {
-            // Header: tap anywhere on it to collapse/expand the thread.
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(onClick = onToggle),
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
@@ -384,6 +383,7 @@ private fun CommentRow(
                 HtmlText(
                     html = comment.text,
                     style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 20.sp),
+                    onClick = onToggle,
                     onLinkClick = onLinkClick
                 )
             }
