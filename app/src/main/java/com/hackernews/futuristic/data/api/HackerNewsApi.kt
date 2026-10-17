@@ -10,6 +10,15 @@ interface HackerNewsApi {
     @GET("topstories.json")
     suspend fun getTopStories(): Response<List<Long>>
 
+    @GET("newstories.json")
+    suspend fun getNewStories(): Response<List<Long>>
+
+    @GET("askstories.json")
+    suspend fun getAskStories(): Response<List<Long>>
+
+    @GET("showstories.json")
+    suspend fun getShowStories(): Response<List<Long>>
+
     @GET("item/{id}.json")
     suspend fun getItem(@Path("id") id: Long): Response<Story>
 

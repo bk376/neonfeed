@@ -1,8 +1,8 @@
 package com.hackernews.futuristic.ui.stories
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,11 +15,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -48,6 +46,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hackernews.futuristic.data.model.RelativeTimeRange
 import com.hackernews.futuristic.data.model.Story
+import com.hackernews.futuristic.data.repository.Feed
+import com.hackernews.futuristic.ui.components.AppChip
 import com.hackernews.futuristic.ui.components.CenteredLoading
 import com.hackernews.futuristic.ui.components.CenteredMessage
 import com.hackernews.futuristic.ui.components.LoadMoreEffect
@@ -67,7 +67,7 @@ fun StoriesScreen(
     viewModel: StoriesViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val selectedTimeRange by viewModel.selectedTimeRange.collectAsStateWithLifecycle()
+    val selection by viewModel.selection.collectAsStateWithLifecycle()
     val bookmarkedIds by viewModel.bookmarkedIds.collectAsStateWithLifecycle()
 
     val listState = rememberLazyListState()
@@ -80,34 +80,43 @@ fun StoriesScreen(
 
     LoadMoreEffect(listState, onLoadMore = viewModel::loadMoreStories)
 
+    // A new feed starts at the top.
+    LaunchedEffect(selection) { listState.scrollToItem(0) }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(AppColors.background)
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(AppColors.surface)
-                .padding(start = 16.dp, end = 4.dp, top = 12.dp, bottom = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                .padding(top = 4.dp, bottom = 4.dp)
         ) {
-            Text(
-                text = "NEONFEED",
-                color = AppColors.accent,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                fontFamily = MonospaceFont,
-                modifier = Modifier.weight(1f)
-            )
-            TimeRangeDropdown(
-                selectedTimeRange = selectedTimeRange,
-                onTimeRangeChange = viewModel::setTimeRange
-            )
-            IconButton(onClick = onThemeClick) {
-                Icon(Icons.Default.Palette, contentDescription = "Theme", tint = AppColors.textSecondary)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "NEONFEED",
+                    color = AppColors.accent,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = MonospaceFont,
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(onClick = onThemeClick) {
+                    Icon(Icons.Default.Palette, contentDescription = "Theme", tint = AppColors.textSecondary)
+                }
             }
+            FeedChips(
+                selection = selection,
+                onSelectFeed = viewModel::selectFeed,
+                onSelectTop = viewModel::selectTop
+            )
         }
 
         when {
@@ -121,7 +130,7 @@ fun StoriesScreen(
 
             !uiState.isLoading && uiState.stories.isEmpty() -> CenteredMessage(
                 title = "Nothing here",
-                message = "No front-page stories from ${selectedTimeRange.displayName.lowercase()}."
+                onRetry = viewModel::refreshStories
             )
 
             else -> {
@@ -198,59 +207,63 @@ fun StoriesScreen(
 }
 
 @Composable
-private fun TimeRangeDropdown(
-    selectedTimeRange: RelativeTimeRange,
-    onTimeRangeChange: (RelativeTimeRange) -> Unit
+private fun FeedChips(
+    selection: FeedSelection,
+    onSelectFeed: (Feed) -> Unit,
+    onSelectTop: (RelativeTimeRange) -> Unit
 ) {
-    var expanded by remember { mutableStateOf(false) }
+    var topMenuOpen by remember { mutableStateOf(false) }
 
-    Box {
-        Row(
-            modifier = Modifier
-                .border(1.dp, AppColors.link.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
-                .clickable { expanded = true }
-                .padding(horizontal = 10.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Icon(
-                Icons.Default.Schedule,
-                contentDescription = null,
-                tint = AppColors.link,
-                modifier = Modifier.size(14.dp)
-            )
-            Text(
-                text = selectedTimeRange.displayName,
-                color = AppColors.link,
-                fontSize = 12.sp,
-                fontFamily = MonospaceFont,
-                fontWeight = FontWeight.Bold
-            )
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Feed.entries.filter { it != Feed.TOP }.forEach { feed ->
+            AppChip(feed.label, selected = selection.feed == feed) { onSelectFeed(feed) }
         }
 
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-            modifier = Modifier.background(AppColors.surface)
-        ) {
-            RelativeTimeRange.entries.forEach { timeRange ->
-                val selected = timeRange == selectedTimeRange
-                DropdownMenuItem(
-                    text = {
-                        Text(
-                            text = timeRange.displayName,
-                            color = if (selected) AppColors.link else AppColors.textPrimary,
-                            fontSize = 13.sp,
-                            fontFamily = MonospaceFont,
-                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
-                        )
-                    },
-                    onClick = {
-                        onTimeRangeChange(timeRange)
-                        expanded = false
-                    }
-                )
+        Box {
+            val isTop = selection.feed == Feed.TOP
+            AppChip(
+                label = if (isTop) "Top · ${topLabel(selection.topRange)} ▾" else "Top ▾",
+                selected = isTop,
+                onClick = { topMenuOpen = true }
+            )
+            DropdownMenu(
+                expanded = topMenuOpen,
+                onDismissRequest = { topMenuOpen = false },
+                modifier = Modifier.background(AppColors.surface)
+            ) {
+                RelativeTimeRange.entries.forEach { range ->
+                    val selected = isTop && range == selection.topRange
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = topLabel(range),
+                                color = if (selected) AppColors.accent else AppColors.textPrimary,
+                                fontSize = 13.sp,
+                                fontFamily = MonospaceFont,
+                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
+                            )
+                        },
+                        onClick = {
+                            onSelectTop(range)
+                            topMenuOpen = false
+                        }
+                    )
+                }
             }
         }
     }
+}
+
+private fun topLabel(range: RelativeTimeRange): String = when (range) {
+    RelativeTimeRange.TODAY -> "Today"
+    RelativeTimeRange.LAST_WEEK -> "Week"
+    RelativeTimeRange.LAST_MONTH -> "Month"
+    RelativeTimeRange.LAST_YEAR -> "Year"
+    RelativeTimeRange.ALL_TIME -> "All time"
 }

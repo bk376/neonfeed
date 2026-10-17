@@ -24,6 +24,9 @@ import retrofit2.Response
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/** Home feeds. FRONT_PAGE/NEW/ASK/SHOW are HN's live lists; TOP is highest-scored in a time window. */
+enum class Feed(val label: String) { FRONT_PAGE("Front page"), NEW("New"), ASK("Ask"), SHOW("Show"), TOP("Top") }
+
 enum class SearchType { STORIES, COMMENTS }
 
 enum class SearchSort(val displayName: String) { RELEVANCE("Relevance"), NEWEST("Newest") }
@@ -51,11 +54,21 @@ class HackerNewsRepository @Inject constructor(
         const val FEED_CACHE_TAG = "FEED"
     }
 
-    // --- Feed (Firebase: live ranking) ---
+    // --- Feeds (Firebase: live ranking) ---
 
-    suspend fun getTopStoryIds(): Result<List<Long>> = runCatching {
-        api.getTopStories().bodyOrThrow()
+    suspend fun getFeedIds(feed: Feed): Result<List<Long>> = runCatching {
+        when (feed) {
+            Feed.FRONT_PAGE -> api.getTopStories()
+            Feed.NEW -> api.getNewStories()
+            Feed.ASK -> api.getAskStories()
+            Feed.SHOW -> api.getShowStories()
+            Feed.TOP -> throw IllegalArgumentException("TOP is paged via getTopStories")
+        }.bodyOrThrow()
     }
+
+    /** Highest-scored stories posted within [range]: Algolia ranks an empty query by points. */
+    suspend fun getTopStories(range: RelativeTimeRange, page: Int): Result<SearchPage> =
+        search(query = "", type = SearchType.STORIES, sort = SearchSort.RELEVANCE, timeRange = range, page = page)
 
     suspend fun getStoriesByIds(storyIds: List<Long>): Result<List<Story>> = runCatching {
         val now = System.currentTimeMillis()

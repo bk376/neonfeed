@@ -24,9 +24,6 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
@@ -48,6 +45,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hackernews.futuristic.data.model.RelativeTimeRange
 import com.hackernews.futuristic.data.repository.SearchSort
 import com.hackernews.futuristic.data.repository.SearchType
+import com.hackernews.futuristic.ui.components.AppChip
 import com.hackernews.futuristic.ui.components.CenteredLoading
 import com.hackernews.futuristic.ui.components.CenteredMessage
 import com.hackernews.futuristic.ui.components.CommentHitCard
@@ -123,9 +121,9 @@ fun SearchScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                SearchChip("Stories", filters.type == SearchType.STORIES) { viewModel.setType(SearchType.STORIES) }
-                SearchChip("Comments", filters.type == SearchType.COMMENTS) { viewModel.setType(SearchType.COMMENTS) }
-                SearchChip(filters.sort.displayName, selected = filters.sort == SearchSort.NEWEST) {
+                AppChip("Stories", filters.type == SearchType.STORIES) { viewModel.setType(SearchType.STORIES) }
+                AppChip("Comments", filters.type == SearchType.COMMENTS) { viewModel.setType(SearchType.COMMENTS) }
+                AppChip(filters.sort.displayName, selected = filters.sort == SearchSort.NEWEST) {
                     viewModel.setSort(if (filters.sort == SearchSort.RELEVANCE) SearchSort.NEWEST else SearchSort.RELEVANCE)
                 }
                 TimeRangeChip(filters.timeRange, viewModel::setTimeRange)
@@ -204,33 +202,11 @@ fun SearchScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun SearchChip(label: String, selected: Boolean, onClick: () -> Unit) {
-    FilterChip(
-        selected = selected,
-        onClick = onClick,
-        label = { Text(label, fontFamily = MonospaceFont, fontSize = 12.sp) },
-        colors = FilterChipDefaults.filterChipColors(
-            containerColor = AppColors.surface,
-            labelColor = AppColors.textSecondary,
-            selectedContainerColor = AppColors.accent.copy(alpha = 0.18f),
-            selectedLabelColor = AppColors.accent
-        ),
-        border = FilterChipDefaults.filterChipBorder(
-            borderColor = AppColors.border,
-            selectedBorderColor = AppColors.accent,
-            enabled = true,
-            selected = selected
-        )
-    )
-}
-
 @Composable
 private fun TimeRangeChip(selected: RelativeTimeRange, onSelect: (RelativeTimeRange) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     Box {
-        SearchChip(
+        AppChip(
             label = if (selected == RelativeTimeRange.ALL_TIME) "Any time" else selected.displayName,
             selected = selected != RelativeTimeRange.ALL_TIME,
             onClick = { expanded = true }
