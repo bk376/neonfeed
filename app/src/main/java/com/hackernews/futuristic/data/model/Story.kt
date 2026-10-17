@@ -25,19 +25,35 @@ data class Story(
     val type: String?
 )
 
-data class Comment(
-    @SerializedName("id")
+/** A comment with its full reply tree, in HN display order. */
+data class CommentNode(
     val id: Long,
-    @SerializedName("by")
     val by: String?,
-    @SerializedName("time")
     val time: Long,
-    @SerializedName("text")
+    /** Raw HN HTML. */
     val text: String?,
-    @SerializedName("kids")
-    val kids: List<Long>?,
-    @SerializedName("parent")
-    val parent: Long?,
-    @SerializedName("type")
-    val type: String?
+    val children: List<CommentNode>
+) {
+    val isDeleted: Boolean get() = by == null && text.isNullOrBlank()
+
+    fun descendantCount(): Int = children.sumOf { 1 + it.descendantCount() }
+}
+
+/** A comment found via search or on a user's page, with the story it belongs to. */
+data class CommentHit(
+    val id: Long,
+    val by: String?,
+    val time: Long,
+    val text: String?,
+    val storyId: Long?,
+    val storyTitle: String?,
+    val points: Int?
 )
+
+enum class RelativeTimeRange(val displayName: String, val hours: Long) {
+    TODAY("Today", 24),
+    LAST_WEEK("Last Week", 168),
+    LAST_MONTH("Last Month", 720),
+    LAST_YEAR("Last Year", 8760),
+    ALL_TIME("All Time", -1)
+}

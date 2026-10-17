@@ -1,223 +1,184 @@
 package com.hackernews.futuristic.ui.detail
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.OpenInNew
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SmallFloatingActionButton
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.core.text.HtmlCompat
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.hackernews.futuristic.data.model.Comment
 import com.hackernews.futuristic.data.model.Story
-import com.hackernews.futuristic.ui.components.CommentThreadSelector
-import com.hackernews.futuristic.ui.components.CommentViewMode
-import com.hackernews.futuristic.ui.components.GlowingCard
-import com.hackernews.futuristic.ui.components.MatrixCommentThread
-import com.hackernews.futuristic.ui.components.PulsingLoadingIndicator
-import com.hackernews.futuristic.ui.components.ScaleInAnimation
-import com.hackernews.futuristic.ui.stories.LoadingIndicator
-import com.hackernews.futuristic.ui.stories.ScoreChip
-import com.hackernews.futuristic.ui.theme.*
+import com.hackernews.futuristic.ui.components.CenteredLoading
+import com.hackernews.futuristic.ui.components.CenteredMessage
+import com.hackernews.futuristic.ui.components.HtmlText
+import com.hackernews.futuristic.ui.components.domainOf
+import com.hackernews.futuristic.ui.components.formatTimeAgo
+import com.hackernews.futuristic.ui.theme.AppColors
+import com.hackernews.futuristic.ui.theme.MonospaceFont
+import kotlinx.coroutines.launch
+
+/** Items above the first comment: header, optional story text, comments heading. */
+private const val HEADER_ITEMS = 3
+private const val MAX_INDENT_DEPTH = 8
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StoryDetailScreen(
     storyId: Long,
     onBackClick: () -> Unit,
+    onUrlClick: (String, String) -> Unit,
+    onAuthorClick: (String) -> Unit,
     viewModel: StoryDetailViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val uriHandler = LocalUriHandler.current
-    
-    LaunchedEffect(storyId) {
-        viewModel.loadStory(storyId)
-    }
-    
+    val bookmarkedIds by viewModel.bookmarkedIds.collectAsStateWithLifecycle()
+    val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(storyId) { viewModel.loadStory(storyId) }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        DarkBackground,
-                        DarkSurface
-                    )
-                )
-            )
+            .background(AppColors.background)
     ) {
         TopAppBar(
-            title = { Text("Story Details") },
+            title = { Text("Discussion", fontFamily = MonospaceFont) },
             navigationIcon = {
                 IconButton(onClick = onBackClick) {
-                    Icon(
-                        Icons.Default.ArrowBack,
-                        contentDescription = "Back",
-                        tint = LightText
-                    )
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                }
+            },
+            actions = {
+                uiState.story?.let { story ->
+                    val isBookmarked = story.id in bookmarkedIds
+                    IconButton(onClick = viewModel::toggleBookmark) {
+                        Icon(
+                            imageVector = if (isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                            contentDescription = if (isBookmarked) "Remove bookmark" else "Add bookmark",
+                            tint = if (isBookmarked) AppColors.bookmark else AppColors.textPrimary
+                        )
+                    }
                 }
             },
             colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = DarkSurface,
-                titleContentColor = LightText
+                containerColor = AppColors.surface,
+                titleContentColor = AppColors.textPrimary,
+                navigationIconContentColor = AppColors.textPrimary
             )
         )
-        
+
+        val story = uiState.story
         when {
-            uiState.isLoading -> {
-                LoadingIndicator(modifier = Modifier.fillMaxSize())
-            }
-            uiState.error != null -> {
-                ErrorMessage(
-                    message = uiState.error ?: "Unknown error",
-                    onRetry = viewModel::retry,
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
-            uiState.story != null -> {
+            uiState.isLoading -> CenteredLoading()
+            uiState.error != null || story == null -> CenteredMessage(
+                title = "COULDN'T LOAD STORY",
+                message = uiState.error,
+                onRetry = viewModel::retry
+            )
+            else -> Box(modifier = Modifier.fillMaxSize()) {
+                val openLink = { url: String -> onUrlClick(url, url) }
+
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    contentPadding = PaddingValues(bottom = 80.dp)
                 ) {
+                    item { StoryHeader(story, onUrlClick, onAuthorClick) }
+
                     item {
-                        val story = uiState.story
-                        if (story != null) {
-                            StoryHeader(
-                                story = story,
-                                onUrlClick = { url ->
-                                    uriHandler.openUri(url)
-                                }
+                        if (!story.text.isNullOrBlank()) {
+                            HtmlText(
+                                html = story.text,
+                                modifier = Modifier.padding(16.dp),
+                                onLinkClick = openLink
                             )
                         }
                     }
-                    
-                    uiState.story?.text?.let { text ->
-                        if (text.isNotBlank()) {
-                            item {
-                                StoryContent(text = text)
+
+                    item {
+                        CommentsHeading(
+                            count = story.descendants ?: 0,
+                            isLoading = uiState.isLoadingComments,
+                            error = uiState.commentsError,
+                            onRetry = viewModel::retry
+                        )
+                    }
+
+                    items(uiState.comments, key = { it.node.id }) { row ->
+                        CommentRow(
+                            row = row,
+                            isOp = row.node.by != null && row.node.by == story.by,
+                            onToggle = { viewModel.toggleCollapsed(row.node.id) },
+                            onAuthorClick = onAuthorClick,
+                            onLinkClick = openLink
+                        )
+                    }
+                }
+
+                if (uiState.comments.isNotEmpty()) {
+                    // Jump to the next top-level thread, like HN readers' "next" button.
+                    SmallFloatingActionButton(
+                        onClick = {
+                            val first = listState.firstVisibleItemIndex - HEADER_ITEMS
+                            val next = uiState.comments.withIndex()
+                                .firstOrNull { (index, row) -> index > first && row.depth == 0 }
+                                ?.index
+                            if (next != null) {
+                                scope.launch { listState.animateScrollToItem(next + HEADER_ITEMS) }
                             }
-                        }
-                    }
-                    
-                    item {
-                        CommentsHeader(
-                            commentCount = uiState.story?.descendants ?: 0,
-                            isLoading = uiState.isLoadingComments
-                        )
-                    }
-                    
-                    // Comment view mode selector (temporarily disabled)
-                    // item {
-                    //     CommentThreadSelector(
-                    //         viewMode = commentViewMode,
-                    //         onViewModeChange = viewModel::setCommentViewMode
-                    //     )
-                    // }
-                    
-                    // Comments section
-                    if (uiState.comments.isNotEmpty()) {
-                        item {
-                            Text(
-                                text = "Comments (${uiState.comments.size})",
-                                color = NeonBlue,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(vertical = 8.dp)
-                            )
-                        }
-                        
-                        // Show individual comments using LazyColumn items
-                        items(
-                            items = uiState.comments,
-                            key = { comment -> comment.id }
-                        ) { comment ->
-                            SafeCommentCard(comment = comment)
-                        }
-                    } else if (!uiState.isLoadingComments) {
-                        item {
-                            Text(
-                                text = "No comments available",
-                                color = TextSecondary,
-                                modifier = Modifier.padding(16.dp)
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun StoryHeader(
-    story: Story,
-    onUrlClick: (String) -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = DarkCard),
-        shape = RoundedCornerShape(16.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth()
-        ) {
-            story.title?.let { title ->
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = LightText,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-            
-            Spacer(modifier = Modifier.height(12.dp))
-            
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    ScoreChip(score = story.score)
-                    story.by?.let { author ->
-                        Text(
-                            text = "by $author",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MediumText
-                        )
-                    }
-                }
-                
-                story.url?.let { url ->
-                    IconButton(
-                        onClick = { onUrlClick(url) }
+                        },
+                        containerColor = AppColors.accent,
+                        contentColor = AppColors.onAccent,
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(16.dp)
                     ) {
-                        Icon(
-                            Icons.Default.OpenInNew,
-                            contentDescription = "Open URL",
-                            tint = NeonBlue
-                        )
+                        Icon(Icons.Default.KeyboardArrowDown, contentDescription = "Next thread")
                     }
                 }
             }
@@ -226,234 +187,214 @@ fun StoryHeader(
 }
 
 @Composable
-fun StoryContent(text: String) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = DarkCard),
-        shape = RoundedCornerShape(16.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth()
-        ) {
-            Text(
-                text = "Content",
-                style = MaterialTheme.typography.titleMedium,
-                color = NeonGreen,
-                fontWeight = FontWeight.Bold
-            )
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            val displayText = try {
-                val cleaned = text.take(2000) // Limit text length
-                HtmlCompat.fromHtml(cleaned, HtmlCompat.FROM_HTML_MODE_LEGACY).toString()
-            } catch (e: Exception) {
-                text.take(1000)
-            }
-            
-            Text(
-                text = displayText,
-                style = MaterialTheme.typography.bodyMedium,
-                color = LightText,
-                maxLines = 20,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-    }
-}
-
-@Composable
-fun CommentsHeader(
-    commentCount: Int,
-    isLoading: Boolean
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = "Comments ($commentCount)",
-            style = MaterialTheme.typography.headlineSmall,
-            color = LightText,
-            fontWeight = FontWeight.Bold
-        )
-        
-        if (isLoading) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(24.dp),
-                color = NeonBlue,
-                strokeWidth = 2.dp
-            )
-        }
-    }
-}
-
-@Composable
-fun SafeCommentCard(comment: Comment) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        colors = CardDefaults.cardColors(containerColor = DarkCard),
-        shape = RoundedCornerShape(8.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .padding(12.dp)
-                .fillMaxWidth()
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                comment.by?.let { author ->
-                    Text(
-                        text = author,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = NeonPurple,
-                        fontWeight = FontWeight.Bold
-                    )
-                } ?: Text(
-                    text = "Anonymous",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = TextSecondary
-                )
-                
-                Text(
-                    text = formatTimeAgo(comment.time),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = DimText
-                )
-            }
-            
-            comment.text?.let { text ->
-                if (text.isNotBlank()) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    
-                    val displayText = text
-                        .replace("<p>", "\n")
-                        .replace("</p>", "")
-                        .replace("<br>", "\n")
-                        .replace("&gt;", ">")
-                        .replace("&lt;", "<")
-                        .replace("&amp;", "&")
-                        .replace("&#x27;", "'")
-                        .replace("&quot;", "\"")
-                        .take(800)
-                    
-                    Text(
-                        text = displayText,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = LightText,
-                        maxLines = 8,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun CommentCard(comment: Comment) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = DarkCard),
-        shape = RoundedCornerShape(8.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .padding(12.dp)
-                .fillMaxWidth()
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                comment.by?.let { author ->
-                    Text(
-                        text = author,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = NeonPurple,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-                
-                Text(
-                    text = formatTimeAgo(comment.time),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = DimText
-                )
-            }
-            
-            comment.text?.let { text ->
-                if (text.isNotBlank()) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    val displayText = try {
-                        HtmlCompat.fromHtml(text.take(1000), HtmlCompat.FROM_HTML_MODE_LEGACY).toString()
-                    } catch (e: Exception) {
-                        text.take(500)
-                    }
-                    
-                    Text(
-                        text = displayText,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = LightText,
-                        maxLines = 10,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun ErrorMessage(
-    message: String,
-    onRetry: () -> Unit,
-    modifier: Modifier = Modifier
+private fun StoryHeader(
+    story: Story,
+    onUrlClick: (String, String) -> Unit,
+    onAuthorClick: (String) -> Unit
 ) {
     Column(
-        modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(AppColors.surface)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         Text(
-            text = message,
-            style = MaterialTheme.typography.bodyMedium,
-            color = ErrorRed
+            text = story.title ?: "Untitled",
+            color = AppColors.textPrimary,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            lineHeight = 26.sp
         )
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        Button(
-            onClick = onRetry,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = NeonBlue
-            )
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text(
-                text = "Retry",
-                color = Color.Black
-            )
+            Text("▲ ${story.score}", color = AppColors.positive, fontSize = 13.sp, fontFamily = MonospaceFont)
+            story.by?.let { author ->
+                Text(
+                    text = author,
+                    color = AppColors.link,
+                    fontSize = 13.sp,
+                    fontFamily = MonospaceFont,
+                    modifier = Modifier.clickable { onAuthorClick(author) }
+                )
+            }
+            Text(formatTimeAgo(story.time), color = AppColors.highlight, fontSize = 13.sp, fontFamily = MonospaceFont)
+        }
+
+        story.url?.let { url ->
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onUrlClick(url, story.title ?: url) },
+                colors = CardDefaults.cardColors(containerColor = AppColors.accent.copy(alpha = 0.12f)),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.OpenInNew,
+                        contentDescription = null,
+                        tint = AppColors.accent,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Column {
+                        Text(
+                            text = "Read article",
+                            color = AppColors.accent,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = MonospaceFont
+                        )
+                        Text(
+                            text = domainOf(url),
+                            color = AppColors.textSecondary,
+                            fontSize = 12.sp,
+                            fontFamily = MonospaceFont
+                        )
+                    }
+                }
+            }
         }
     }
 }
 
-private fun formatTimeAgo(timestamp: Long): String {
-    val now = System.currentTimeMillis() / 1000
-    val diff = now - timestamp
-    
-    return when {
-        diff < 60 -> "now"
-        diff < 3600 -> "${diff / 60}m ago"
-        diff < 86400 -> "${diff / 3600}h ago"
-        else -> "${diff / 86400}d ago"
+@Composable
+private fun CommentsHeading(
+    count: Int,
+    isLoading: Boolean,
+    error: String?,
+    onRetry: () -> Unit
+) {
+    Column {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = "$count COMMENTS",
+                color = AppColors.accent,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                fontFamily = MonospaceFont,
+                modifier = Modifier.weight(1f)
+            )
+            if (isLoading) {
+                CircularProgressIndicator(
+                    color = AppColors.accent,
+                    strokeWidth = 2.dp,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+            if (error != null) {
+                TextButton(onClick = onRetry) {
+                    Text("RETRY", color = AppColors.error, fontFamily = MonospaceFont, fontSize = 12.sp)
+                }
+            }
+        }
+        HorizontalDivider(color = AppColors.border)
     }
+}
+
+@Composable
+private fun CommentRow(
+    row: VisibleComment,
+    isOp: Boolean,
+    onToggle: () -> Unit,
+    onAuthorClick: (String) -> Unit,
+    onLinkClick: (String) -> Unit
+) {
+    val comment = row.node
+    val indentLevel = row.depth.coerceAtMost(MAX_INDENT_DEPTH)
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(IntrinsicSize.Min)
+            .padding(start = 8.dp + (indentLevel * 12).dp, end = 12.dp)
+    ) {
+        if (row.depth > 0) {
+            Box(
+                modifier = Modifier
+                    .width(2.dp)
+                    .fillMaxHeight()
+                    .padding(vertical = 4.dp)
+                    .background(depthColor(row.depth).copy(alpha = 0.6f))
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+        }
+
+        Column(modifier = Modifier.padding(vertical = 10.dp)) {
+            // Header: tap anywhere on it to collapse/expand the thread.
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onToggle),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                val author = comment.by
+                Text(
+                    text = author ?: "[deleted]",
+                    color = if (author != null) AppColors.link else AppColors.textDim,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = MonospaceFont,
+                    modifier = if (author != null) Modifier.clickable { onAuthorClick(author) } else Modifier
+                )
+                if (isOp) {
+                    Text(
+                        text = "OP",
+                        color = AppColors.onAccent,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = MonospaceFont,
+                        modifier = Modifier
+                            .background(AppColors.accent, RoundedCornerShape(4.dp))
+                            .padding(horizontal = 4.dp, vertical = 1.dp)
+                    )
+                }
+                Text(
+                    text = formatTimeAgo(comment.time),
+                    color = AppColors.textDim,
+                    fontSize = 12.sp,
+                    fontFamily = MonospaceFont,
+                    modifier = Modifier.weight(1f)
+                )
+                if (row.isCollapsed) {
+                    Text(
+                        text = "[+${row.hiddenReplies + 1}]",
+                        color = AppColors.secondaryAccent,
+                        fontSize = 12.sp,
+                        fontFamily = MonospaceFont
+                    )
+                }
+            }
+
+            if (!row.isCollapsed && !comment.text.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(6.dp))
+                HtmlText(
+                    html = comment.text,
+                    style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 20.sp),
+                    onLinkClick = onLinkClick
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun depthColor(depth: Int): Color = when (depth % 4) {
+    1 -> AppColors.accent
+    2 -> AppColors.secondaryAccent
+    3 -> AppColors.positive
+    else -> AppColors.highlight
 }

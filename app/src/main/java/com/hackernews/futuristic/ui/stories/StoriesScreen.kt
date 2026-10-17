@@ -1,367 +1,256 @@
 package com.hackernews.futuristic.ui.stories
 
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Memory
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshContainer
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.hackernews.futuristic.data.model.RelativeTimeRange
 import com.hackernews.futuristic.data.model.Story
-import com.hackernews.futuristic.ui.components.CyberpunkButton
-import com.hackernews.futuristic.ui.components.CyberpunkCard
-import com.hackernews.futuristic.ui.components.GlitchText
-import com.hackernews.futuristic.ui.components.GlowingCard
-import com.hackernews.futuristic.ui.components.NeuralNetworkVisualization
-import com.hackernews.futuristic.ui.components.PulsingLoadingIndicator
-import com.hackernews.futuristic.ui.components.ScaleInAnimation
-import com.hackernews.futuristic.ui.components.StoryAnalysisCard
-import com.hackernews.futuristic.ui.components.UserProfileCard
-import com.hackernews.futuristic.ui.theme.*
-import java.text.SimpleDateFormat
-import java.util.*
+import com.hackernews.futuristic.ui.components.CenteredLoading
+import com.hackernews.futuristic.ui.components.CenteredMessage
+import com.hackernews.futuristic.ui.components.LoadMoreEffect
+import com.hackernews.futuristic.ui.components.StoryCard
+import com.hackernews.futuristic.ui.theme.AppColors
+import com.hackernews.futuristic.ui.theme.MonospaceFont
+import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StoriesScreen(
     onStoryClick: (Story) -> Unit,
+    onUrlClick: (String, String) -> Unit,
+    onAuthorClick: (String) -> Unit,
+    onThemeClick: () -> Unit,
+    onScrollToTopCallback: ((suspend () -> Unit) -> Unit),
     viewModel: StoriesViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val selectedStoryType by viewModel.selectedStoryType.collectAsStateWithLifecycle()
-    val analysisResults by viewModel.analysisResults.collectAsStateWithLifecycle()
-    val isNeuralAnalysisEnabled by viewModel.isNeuralAnalysisEnabled.collectAsStateWithLifecycle()
-    val userProfile by viewModel.userProfile.collectAsStateWithLifecycle()
-    val achievements by viewModel.achievements.collectAsStateWithLifecycle()
-    
+    val selectedTimeRange by viewModel.selectedTimeRange.collectAsStateWithLifecycle()
+    val bookmarkedIds by viewModel.bookmarkedIds.collectAsStateWithLifecycle()
+
+    val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+    val showScrollToTop by remember { derivedStateOf { listState.firstVisibleItemIndex > 2 } }
+
+    LaunchedEffect(Unit) {
+        onScrollToTopCallback { listState.animateScrollToItem(0) }
+    }
+
+    LoadMoreEffect(listState, onLoadMore = viewModel::loadMoreStories)
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        DarkBackground,
-                        DarkSurface
-                    )
-                )
-            )
+            .background(AppColors.background)
     ) {
-        StoryTypeSelector(
-            selectedType = selectedStoryType,
-            onTypeSelected = viewModel::selectStoryType,
-            modifier = Modifier.padding(16.dp)
-        )
-        
-        NeuralAnalysisToggle(
-            isEnabled = isNeuralAnalysisEnabled,
-            onToggle = viewModel::toggleNeuralAnalysis,
-            modifier = Modifier.padding(horizontal = 16.dp)
-        )
-        
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(AppColors.surface)
+                .padding(start = 16.dp, end = 4.dp, top = 12.dp, bottom = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = "NEONFEED",
+                color = AppColors.accent,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                fontFamily = MonospaceFont,
+                modifier = Modifier.weight(1f)
+            )
+            TimeRangeDropdown(
+                selectedTimeRange = selectedTimeRange,
+                onTimeRangeChange = viewModel::setTimeRange
+            )
+            IconButton(onClick = onThemeClick) {
+                Icon(Icons.Default.Palette, contentDescription = "Theme", tint = AppColors.textSecondary)
+            }
+        }
+
         when {
-            uiState.isLoading && uiState.stories.isEmpty() -> {
-                LoadingIndicator(modifier = Modifier.fillMaxSize())
-            }
-            uiState.error != null && uiState.stories.isEmpty() -> {
-                ErrorMessage(
-                    message = uiState.error ?: "Unknown error",
-                    onRetry = viewModel::retry,
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
+            uiState.isLoading && uiState.stories.isEmpty() -> CenteredLoading()
+
+            uiState.error != null && uiState.stories.isEmpty() -> CenteredMessage(
+                title = "CONNECTION ERROR",
+                message = uiState.error,
+                onRetry = viewModel::refreshStories
+            )
+
+            !uiState.isLoading && uiState.stories.isEmpty() -> CenteredMessage(
+                title = "Nothing here",
+                message = "No front-page stories from ${selectedTimeRange.displayName.lowercase()}."
+            )
+
             else -> {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    // User Profile Card
-                    item {
-                        UserProfileCard(
-                            profile = userProfile,
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                val pullToRefreshState = rememberPullToRefreshState()
+                LaunchedEffect(pullToRefreshState.isRefreshing) {
+                    if (pullToRefreshState.isRefreshing) {
+                        viewModel.refreshStories()
+                        pullToRefreshState.endRefresh()
                     }
-                    
-                    items(items = uiState.stories) { story ->
-                        ScaleInAnimation {
-                            Column(
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                StoryCard(
-                                    story = story,
-                                    onClick = { 
-                                        onStoryClick(story)
-                                        viewModel.onStoryRead(story, readingTime = 180L, completed = true)
-                                    }
-                                )
-                                
-                                if (isNeuralAnalysisEnabled) {
-                                    analysisResults[story.id]?.let { analysis ->
-                                        StoryAnalysisCard(
-                                            analysis = analysis,
-                                            modifier = Modifier.fillMaxWidth()
-                                        )
-                                    }
+                }
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .nestedScroll(pullToRefreshState.nestedScrollConnection)
+                ) {
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        items(uiState.stories, key = { it.id }) { story ->
+                            StoryCard(
+                                story = story,
+                                onStoryClick = { onStoryClick(story) },
+                                onUrlClick = onUrlClick,
+                                onAuthorClick = onAuthorClick,
+                                isBookmarked = story.id in bookmarkedIds,
+                                onBookmarkClick = { viewModel.toggleBookmark(story) }
+                            )
+                        }
+
+                        if (uiState.isLoading) {
+                            item {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(color = AppColors.accent, modifier = Modifier.size(32.dp))
                                 }
                             }
                         }
                     }
-                }
-            }
-        }
-    }
-}
 
-@Composable
-fun StoryTypeSelector(
-    selectedType: StoryType,
-    onTypeSelected: (StoryType) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        StoryType.values().forEach { type ->
-            CyberpunkButton(
-                text = type.name,
-                isSelected = selectedType == type,
-                onClick = { onTypeSelected(type) },
-                modifier = Modifier.weight(1f)
-            )
-        }
-    }
-}
-
-@Composable
-fun StoryCard(
-    story: Story,
-    onClick: () -> Unit
-) {
-    CyberpunkCard(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() }
-    ) {
-        Column(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            story.title?.let { title ->
-                GlitchText(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = LightText,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    CyberpunkScoreChip(score = story.score)
-                    story.by?.let { author ->
-                        Text(
-                            text = "by $author",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = NeonYellow
-                        )
+                    // Fully qualified: inside Column, the ColumnScope overload would otherwise win.
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = showScrollToTop,
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(16.dp)
+                    ) {
+                        FloatingActionButton(
+                            onClick = { scope.launch { listState.animateScrollToItem(0) } },
+                            containerColor = AppColors.accent,
+                            contentColor = AppColors.onAccent
+                        ) {
+                            Icon(Icons.Default.KeyboardArrowUp, contentDescription = "Scroll to top")
+                        }
                     }
+
+                    PullToRefreshContainer(
+                        state = pullToRefreshState,
+                        modifier = Modifier.align(Alignment.TopCenter),
+                        containerColor = AppColors.surface,
+                        contentColor = AppColors.accent
+                    )
                 }
-                
-                Text(
-                    text = formatTimeAgo(story.time),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = DimText
+            }
+        }
+    }
+}
+
+@Composable
+private fun TimeRangeDropdown(
+    selectedTimeRange: RelativeTimeRange,
+    onTimeRangeChange: (RelativeTimeRange) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box {
+        Row(
+            modifier = Modifier
+                .border(1.dp, AppColors.link.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                .clickable { expanded = true }
+                .padding(horizontal = 10.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Icon(
+                Icons.Default.Schedule,
+                contentDescription = null,
+                tint = AppColors.link,
+                modifier = Modifier.size(14.dp)
+            )
+            Text(
+                text = selectedTimeRange.displayName,
+                color = AppColors.link,
+                fontSize = 12.sp,
+                fontFamily = MonospaceFont,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.background(AppColors.surface)
+        ) {
+            RelativeTimeRange.entries.forEach { timeRange ->
+                val selected = timeRange == selectedTimeRange
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            text = timeRange.displayName,
+                            color = if (selected) AppColors.link else AppColors.textPrimary,
+                            fontSize = 13.sp,
+                            fontFamily = MonospaceFont,
+                            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
+                        )
+                    },
+                    onClick = {
+                        onTimeRangeChange(timeRange)
+                        expanded = false
+                    }
                 )
             }
-            
-            story.descendants?.let { commentCount ->
-                if (commentCount > 0) {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "$commentCount comments",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = NeonGreen
-                    )
-                }
-            }
         }
-    }
-}
-
-@Composable
-fun CyberpunkScoreChip(score: Int) {
-    Box(
-        modifier = Modifier
-            .background(
-                brush = Brush.linearGradient(
-                    colors = listOf(
-                        NeonYellow.copy(alpha = 0.3f),
-                        CyberpunkOrange.copy(alpha = 0.2f)
-                    )
-                ),
-                shape = RoundedCornerShape(4.dp)
-            )
-            .border(
-                width = 1.dp,
-                color = NeonYellow,
-                shape = RoundedCornerShape(4.dp)
-            )
-            .padding(horizontal = 8.dp, vertical = 4.dp)
-    ) {
-        Text(
-            text = score.toString(),
-            style = MaterialTheme.typography.labelSmall,
-            color = NeonYellow,
-            fontWeight = FontWeight.Bold
-        )
-    }
-}
-
-@Composable
-fun ScoreChip(score: Int) {
-    CyberpunkScoreChip(score = score)
-}
-
-@Composable
-fun LoadingIndicator(modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier,
-        contentAlignment = Alignment.Center
-    ) {
-        PulsingLoadingIndicator(
-            color = NeonBlue
-        )
-    }
-}
-
-@Composable
-fun ErrorMessage(
-    message: String,
-    onRetry: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodyMedium,
-            color = ErrorRed
-        )
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        Button(
-            onClick = onRetry,
-            colors = ButtonDefaults.buttonColors(
-                containerColor = NeonBlue
-            )
-        ) {
-            Text(
-                text = "Retry",
-                color = Color.Black
-            )
-        }
-    }
-}
-
-@Composable
-fun NeuralAnalysisToggle(
-    isEnabled: Boolean,
-    onToggle: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val toggleColor by animateColorAsState(
-        targetValue = if (isEnabled) NeonGreen else TextSecondary,
-        animationSpec = tween(300)
-    )
-    
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable { onToggle() }
-            .background(
-                brush = Brush.linearGradient(
-                    colors = listOf(
-                        DarkSurface.copy(alpha = 0.7f),
-                        DarkBackground.copy(alpha = 0.9f)
-                    )
-                ),
-                shape = RoundedCornerShape(8.dp)
-            )
-            .border(
-                width = 1.dp,
-                color = if (isEnabled) NeonGreen else DarkBorder,
-                shape = RoundedCornerShape(8.dp)
-            )
-            .padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Icon(
-            imageVector = Icons.Default.Memory,
-            contentDescription = "Neural Analysis",
-            tint = toggleColor,
-            modifier = Modifier.size(20.dp)
-        )
-        
-        Text(
-            text = "NEURAL ANALYSIS",
-            color = toggleColor,
-            style = MaterialTheme.typography.labelMedium.copy(
-                fontFamily = MonospaceFont,
-                fontWeight = FontWeight.Bold
-            )
-        )
-        
-        Spacer(modifier = Modifier.weight(1f))
-        
-        Text(
-            text = if (isEnabled) "ON" else "OFF",
-            color = toggleColor,
-            style = MaterialTheme.typography.labelSmall.copy(
-                fontFamily = MonospaceFont,
-                fontWeight = FontWeight.Bold
-            )
-        )
-    }
-}
-
-private fun formatTimeAgo(timestamp: Long): String {
-    val now = System.currentTimeMillis() / 1000
-    val diff = now - timestamp
-    
-    return when {
-        diff < 60 -> "now"
-        diff < 3600 -> "${diff / 60}m ago"
-        diff < 86400 -> "${diff / 3600}h ago"
-        else -> "${diff / 86400}d ago"
     }
 }

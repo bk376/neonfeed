@@ -1,334 +1,195 @@
 package com.hackernews.futuristic.data.repository
 
+import com.hackernews.futuristic.data.api.AlgoliaApi
+import com.hackernews.futuristic.data.api.AlgoliaHit
+import com.hackernews.futuristic.data.api.AlgoliaItem
+import com.hackernews.futuristic.data.api.AlgoliaSearchResponse
 import com.hackernews.futuristic.data.api.HackerNewsApi
+import com.hackernews.futuristic.data.api.User
 import com.hackernews.futuristic.data.local.dao.BookmarkDao
-import com.hackernews.futuristic.data.local.dao.CommentDao
 import com.hackernews.futuristic.data.local.dao.StoryDao
 import com.hackernews.futuristic.data.local.entities.BookmarkEntity
 import com.hackernews.futuristic.data.local.entities.toDomainModel
 import com.hackernews.futuristic.data.local.entities.toEntity
-import com.hackernews.futuristic.data.model.Comment
+import com.hackernews.futuristic.data.model.CommentHit
+import com.hackernews.futuristic.data.model.CommentNode
+import com.hackernews.futuristic.data.model.RelativeTimeRange
 import com.hackernews.futuristic.data.model.Story
-import com.hackernews.futuristic.data.api.User
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import retrofit2.Response
 import javax.inject.Inject
 import javax.inject.Singleton
+
+enum class SearchType { STORIES, COMMENTS }
+
+enum class SearchSort(val displayName: String) { RELEVANCE("Relevance"), NEWEST("Newest") }
+
+data class SearchPage(
+    val stories: List<Story>,
+    val comments: List<CommentHit>,
+    val page: Int,
+    val hasMore: Boolean,
+    val totalHits: Int
+)
 
 @Singleton
 class HackerNewsRepository @Inject constructor(
     private val api: HackerNewsApi,
+    private val algolia: AlgoliaApi,
     private val storyDao: StoryDao,
-    private val commentDao: CommentDao,
     private val bookmarkDao: BookmarkDao
 ) {
-    
-    companion object {
-        private const val CACHE_EXPIRY_TIME = 5 * 60 * 1000L // 5 minutes
+
+    private companion object {
+        /** Scores and comment counts move fast; don't show cached ones older than this. */
+        const val STORY_CACHE_TTL = 5 * 60 * 1000L
+        const val STORY_CACHE_RETENTION = 24 * 60 * 60 * 1000L
+        const val FEED_CACHE_TAG = "FEED"
     }
-    
-    suspend fun getTopStories(limit: Int = 30): Result<List<Story>> {
-        return getStoriesWithCache("TOP", limit) { api.getTopStories() }
+
+    // --- Feed (Firebase: live ranking) ---
+
+    suspend fun getTopStoryIds(): Result<List<Long>> = runCatching {
+        api.getTopStories().bodyOrThrow()
     }
-    
-    suspend fun getNewStories(limit: Int = 30): Result<List<Story>> {
-        return getStoriesWithCache("NEW", limit) { api.getNewStories() }
-    }
-    
-    suspend fun getBestStories(limit: Int = 30): Result<List<Story>> {
-        return getStoriesWithCache("BEST", limit) { api.getBestStories() }
-    }
-    
-    // Unified caching method
-    private suspend fun getStoriesWithCache(
-        type: String,
-        limit: Int,
-        apiCall: suspend () -> retrofit2.Response<List<Long>>
-    ): Result<List<Story>> {
-        return try {
-            // Check if we have fresh cached data
-            val lastFetch = storyDao.getLastFetchTime(type)
-            val currentTime = System.currentTimeMillis()
-            
-            if (lastFetch != null && (currentTime - lastFetch) < CACHE_EXPIRY_TIME) {
-                // Return cached data
-                val cachedStories = storyDao.getStoriesByTypeSync(type, limit)
-                if (cachedStories.isNotEmpty()) {
-                    return Result.success(cachedStories.map { it.toDomainModel() })
-                }
-            }
-            
-            // Fetch fresh data from API
-            val response = apiCall()
-            if (response.isSuccessful) {
-                val storyIds = response.body()?.take(limit) ?: emptyList()
-                val stories = fetchStoriesFromApi(storyIds)
-                
-                // Cache the stories
-                val storyEntities = stories.map { it.toEntity(type) }
-                storyDao.deleteStoriesByType(type) // Clear old cache
-                storyDao.insertStories(storyEntities)
-                
-                Result.success(stories)
-            } else {
-                // Try to return stale cache data if API fails
-                val cachedStories = storyDao.getStoriesByTypeSync(type, limit)
-                if (cachedStories.isNotEmpty()) {
-                    Result.success(cachedStories.map { it.toDomainModel() })
-                } else {
-                    Result.failure(Exception("Failed to fetch $type stories and no cache available"))
-                }
-            }
-        } catch (e: Exception) {
-            // Return cached data on network error
-            try {
-                val cachedStories = storyDao.getStoriesByTypeSync(type, limit)
-                if (cachedStories.isNotEmpty()) {
-                    Result.success(cachedStories.map { it.toDomainModel() })
-                } else {
-                    Result.failure(e)
-                }
-            } catch (dbError: Exception) {
-                Result.failure(e)
-            }
+
+    suspend fun getStoriesByIds(storyIds: List<Long>): Result<List<Story>> = runCatching {
+        val now = System.currentTimeMillis()
+        val cached = storyDao.getFreshStoriesByIds(storyIds, freshSince = now - STORY_CACHE_TTL)
+            .map { it.toDomainModel() }
+        val cachedIds = cached.mapTo(HashSet()) { it.id }
+        val fetched = fetchStories(storyIds.filterNot { it in cachedIds })
+
+        if (fetched.isNotEmpty()) {
+            storyDao.insertStories(fetched.map { it.toEntity(FEED_CACHE_TAG) })
         }
+        storyDao.deleteStoriesOlderThan(now - STORY_CACHE_RETENTION)
+
+        val byId = (cached + fetched).associateBy { it.id }
+        storyIds.mapNotNull { byId[it] }
     }
-    
-    suspend fun getStory(id: Long): Result<Story> {
-        return try {
-            val response = api.getItem(id)
-            if (response.isSuccessful) {
-                response.body()?.let { story ->
-                    Result.success(story)
-                } ?: Result.failure(Exception("Story not found"))
-            } else {
-                Result.failure(Exception("Failed to fetch story"))
-            }
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+
+    suspend fun getStory(id: Long): Result<Story> = runCatching {
+        api.getItem(id).bodyOrThrow()
     }
-    
-    suspend fun getComments(commentIds: List<Long>): Result<List<Comment>> {
-        return try {
-            val comments = fetchCommentsWithCache(commentIds)
-            Result.success(comments)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+
+    private suspend fun fetchStories(ids: List<Long>): List<Story> = coroutineScope {
+        ids.map { id ->
+            async { runCatching { api.getItem(id).body() }.getOrNull() }
+        }.awaitAll().filterNotNull()
     }
-    
-    private suspend fun fetchCommentsWithCache(commentIds: List<Long>): List<Comment> {
-        // Check cache first
-        val cachedComments = commentDao.getCommentsByIds(commentIds)
-        val cachedIds = cachedComments.map { it.id }.toSet()
-        val missingIds = commentIds.filterNot { it in cachedIds }
-        
-        // Fetch missing comments from API
-        val newComments = if (missingIds.isNotEmpty()) {
-            fetchCommentsFromApi(missingIds)
+
+    // --- Comments (Algolia: the whole tree in one request) ---
+
+    /**
+     * Loads every comment on [story]. Top-level threads follow HN's ranking (the
+     * order of [Story.kids]); replies within a thread are chronological.
+     */
+    suspend fun getCommentTree(story: Story): Result<List<CommentNode>> = runCatching {
+        val item = algolia.getItem(story.id).bodyOrThrow()
+        val rank = story.kids.orEmpty().withIndex().associate { (index, id) -> id to index }
+        item.children.orEmpty()
+            .map { it.toCommentNode() }
+            .sortedBy { rank[it.id] ?: Int.MAX_VALUE }
+    }
+
+    private fun AlgoliaItem.toCommentNode(): CommentNode = CommentNode(
+        id = id,
+        by = author,
+        time = createdAt,
+        text = text,
+        children = children.orEmpty().map { it.toCommentNode() }
+    )
+
+    // --- Search (Algolia) ---
+
+    suspend fun search(
+        query: String,
+        type: SearchType,
+        sort: SearchSort,
+        timeRange: RelativeTimeRange,
+        page: Int = 0
+    ): Result<SearchPage> = runCatching {
+        val tags = if (type == SearchType.STORIES) "story" else "comment"
+        val numericFilters = if (timeRange == RelativeTimeRange.ALL_TIME) {
+            null
         } else {
-            emptyList()
+            val since = System.currentTimeMillis() / 1000 - timeRange.hours * 3600
+            "created_at_i>$since"
         }
-        
-        // Cache new comments
-        if (newComments.isNotEmpty()) {
-            val commentEntities = newComments.map { it.toEntity() }
-            commentDao.insertComments(commentEntities)
+        val response = when (sort) {
+            SearchSort.RELEVANCE -> algolia.search(query, tags, numericFilters, page)
+            SearchSort.NEWEST -> algolia.searchByDate(query, tags, numericFilters, page)
         }
-        
-        // Return all comments in original order
-        val allCommentsMap = (cachedComments.map { it.toDomainModel() } + newComments).associateBy { it.id }
-        return commentIds.mapNotNull { allCommentsMap[it] }
+        response.bodyOrThrow().toSearchPage(type)
     }
-    
-    // Fast loading - only top-level comments initially
-    suspend fun getTopLevelComments(commentIds: List<Long>, limit: Int = 50): Result<List<Comment>> {
-        return try {
-            val limitedIds = commentIds.take(limit)
-            val comments = fetchCommentsWithCache(limitedIds)
-            Result.success(comments)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+
+    private fun AlgoliaSearchResponse.toSearchPage(type: SearchType): SearchPage {
+        val hits = hits.orEmpty()
+        return SearchPage(
+            stories = if (type == SearchType.STORIES) hits.mapNotNull { it.toStory() } else emptyList(),
+            comments = if (type == SearchType.COMMENTS) hits.mapNotNull { it.toCommentHit() } else emptyList(),
+            page = page,
+            hasMore = page + 1 < nbPages,
+            totalHits = nbHits
+        )
     }
-    
-    // Load children for specific comment
-    suspend fun getChildComments(parentComment: Comment): Result<List<Comment>> {
-        return try {
-            val childIds = parentComment.kids ?: emptyList()
-            val children = fetchCommentsWithCache(childIds.take(20)) // Limit children too
-            Result.success(children)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+
+    private fun AlgoliaHit.toStory(): Story? {
+        val id = objectId.toLongOrNull() ?: return null
+        return Story(
+            id = id,
+            title = title,
+            url = url,
+            text = storyText,
+            by = author,
+            time = createdAt,
+            score = points ?: 0,
+            descendants = numComments,
+            kids = null,
+            type = "story"
+        )
     }
-    
-    // New methods for infinite scroll
-    suspend fun getTopStoryIds(): Result<List<Long>> {
-        return try {
-            val response = api.getTopStories()
-            if (response.isSuccessful) {
-                Result.success(response.body() ?: emptyList())
-            } else {
-                Result.failure(Exception("Failed to fetch top story IDs"))
-            }
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+
+    private fun AlgoliaHit.toCommentHit(): CommentHit? {
+        val id = objectId.toLongOrNull() ?: return null
+        return CommentHit(
+            id = id,
+            by = author,
+            time = createdAt,
+            text = commentText,
+            storyId = storyId,
+            storyTitle = storyTitle,
+            points = points
+        )
     }
-    
-    suspend fun getNewStoryIds(): Result<List<Long>> {
-        return try {
-            val response = api.getNewStories()
-            if (response.isSuccessful) {
-                Result.success(response.body() ?: emptyList())
-            } else {
-                Result.failure(Exception("Failed to fetch new story IDs"))
-            }
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+
+    // --- Users ---
+
+    suspend fun getUser(username: String): Result<User> = runCatching {
+        api.getUser(username).bodyOrThrow()
     }
-    
-    suspend fun getBestStoryIds(): Result<List<Long>> {
-        return try {
-            val response = api.getBestStories()
-            if (response.isSuccessful) {
-                Result.success(response.body() ?: emptyList())
-            } else {
-                Result.failure(Exception("Failed to fetch best story IDs"))
-            }
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+
+    suspend fun getUserStories(username: String, page: Int = 0): Result<SearchPage> = runCatching {
+        algolia.searchByDate(query = "", tags = "story,author_$username", page = page)
+            .bodyOrThrow()
+            .toSearchPage(SearchType.STORIES)
     }
-    
-    suspend fun getStoriesByIds(storyIds: List<Long>): Result<List<Story>> {
-        return try {
-            // First check cache for existing stories
-            val cachedStories = storyDao.getStoriesByIds(storyIds)
-            val cachedIds = cachedStories.map { it.id }.toSet()
-            val missingIds = storyIds.filterNot { it in cachedIds }
-            
-            // Fetch missing stories from API
-            val newStories = if (missingIds.isNotEmpty()) {
-                fetchStoriesFromApi(missingIds)
-            } else {
-                emptyList()
-            }
-            
-            // Cache new stories
-            if (newStories.isNotEmpty()) {
-                val newEntities = newStories.map { it.toEntity("FETCH") }
-                storyDao.insertStories(newEntities)
-            }
-            
-            // Combine cached and new stories in original order
-            val allStoriesMap = (cachedStories.map { it.toDomainModel() } + newStories).associateBy { it.id }
-            val orderedStories = storyIds.mapNotNull { allStoriesMap[it] }
-            
-            Result.success(orderedStories)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
+
+    suspend fun getUserComments(username: String, page: Int = 0): Result<SearchPage> = runCatching {
+        algolia.searchByDate(query = "", tags = "comment,author_$username", page = page)
+            .bodyOrThrow()
+            .toSearchPage(SearchType.COMMENTS)
     }
-    
-    private suspend fun fetchStoriesFromApi(storyIds: List<Long>): List<Story> = coroutineScope {
-        storyIds.map { id ->
-            async {
-                try {
-                    val response = api.getItem(id)
-                    if (response.isSuccessful) {
-                        response.body()
-                    } else {
-                        null
-                    }
-                } catch (e: Exception) {
-                    null
-                }
-            }
-        }.awaitAll().filterNotNull()
-    }
-    
-    private suspend fun fetchCommentsRecursively(commentIds: List<Long>): List<Comment> = coroutineScope {
-        val allComments = mutableListOf<Comment>()
-        val visitedIds = mutableSetOf<Long>()
-        
-        suspend fun fetchCommentsDeep(ids: List<Long>) {
-            val comments = fetchCommentsWithCache(ids.filter { it !in visitedIds })
-            allComments.addAll(comments)
-            visitedIds.addAll(ids)
-            
-            // Recursively fetch children
-            val childIds = comments.flatMap { it.kids ?: emptyList() }
-            if (childIds.isNotEmpty()) {
-                fetchCommentsDeep(childIds)
-            }
-        }
-        
-        fetchCommentsDeep(commentIds)
-        allComments.toList()
-    }
-    
-    private suspend fun fetchCommentsFromApi(commentIds: List<Long>): List<Comment> = coroutineScope {
-        commentIds.map { id ->
-            async {
-                try {
-                    val response = api.getComment(id)
-                    if (response.isSuccessful) {
-                        response.body()
-                    } else {
-                        null
-                    }
-                } catch (e: Exception) {
-                    null
-                }
-            }
-        }.awaitAll().filterNotNull()
-    }
-    
-    // Bookmark methods
-    suspend fun bookmarkStory(story: Story): Result<Unit> {
-        return try {
-            val bookmarkEntity = BookmarkEntity(
-                storyId = story.id,
-                title = story.title ?: "",
-                url = story.url,
-                by = story.by ?: "",
-                time = story.time,
-                score = story.score ?: 0,
-                descendants = story.descendants ?: 0
-            )
-            bookmarkDao.insertBookmark(bookmarkEntity)
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-    
-    suspend fun removeBookmark(storyId: Long): Result<Unit> {
-        return try {
-            bookmarkDao.deleteBookmarkById(storyId)
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-    
-    suspend fun isBookmarked(storyId: Long): Boolean {
-        return try {
-            bookmarkDao.isBookmarked(storyId)
-        } catch (e: Exception) {
-            false
-        }
-    }
-    
-    fun getBookmarkedStories(): Flow<List<Story>> {
-        return bookmarkDao.getAllBookmarks().map { bookmarks ->
+
+    // --- Bookmarks ---
+
+    fun getBookmarkedStories(): Flow<List<Story>> =
+        bookmarkDao.getAllBookmarks().map { bookmarks ->
             bookmarks.map { bookmark ->
                 Story(
                     id = bookmark.storyId,
@@ -344,103 +205,31 @@ class HackerNewsRepository @Inject constructor(
                 )
             }
         }
-    }
-    
-    suspend fun getBookmarkCount(): Int {
-        return try {
-            bookmarkDao.getBookmarkCount()
-        } catch (e: Exception) {
-            0
-        }
-    }
-    
-    // User profile methods
-    suspend fun getUser(username: String): Result<User> {
-        return try {
-            val response = api.getUser(username)
-            if (response.isSuccessful) {
-                response.body()?.let { user ->
-                    Result.success(user)
-                } ?: Result.failure(Exception("User not found"))
-            } else {
-                Result.failure(Exception("Failed to fetch user: ${response.code()}"))
-            }
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-    
-    suspend fun getUserSubmissions(username: String, limit: Int = 20): Result<List<Story>> {
-        return try {
-            val userResult = getUser(username)
-            userResult.fold(
-                onSuccess = { user ->
-                    val submissionIds = user.submitted?.take(limit * 2) ?: emptyList() // Get more to filter
-                    if (submissionIds.isNotEmpty()) {
-                        // Filter for actual stories (not comments)
-                        val stories = mutableListOf<Story>()
-                        submissionIds.forEach { id ->
-                            try {
-                                val response = api.getItem(id)
-                                if (response.isSuccessful) {
-                                    response.body()?.let { item ->
-                                        // Only add if it's a story (has title and type is "story")
-                                        if (item.type == "story" && !item.title.isNullOrBlank()) {
-                                            stories.add(item)
-                                            if (stories.size >= limit) return@forEach
-                                        }
-                                    }
-                                }
-                            } catch (e: Exception) {
-                                // Skip failed items
-                            }
-                        }
-                        Result.success(stories)
-                    } else {
-                        Result.success(emptyList())
-                    }
-                },
-                onFailure = { error ->
-                    Result.failure(error)
-                }
+
+    fun getBookmarkedIds(): Flow<Set<Long>> = bookmarkDao.getBookmarkedIds().map { it.toSet() }
+
+    suspend fun toggleBookmark(story: Story) {
+        if (bookmarkDao.isBookmarked(story.id)) {
+            bookmarkDao.deleteBookmarkById(story.id)
+        } else {
+            bookmarkDao.insertBookmark(
+                BookmarkEntity(
+                    storyId = story.id,
+                    title = story.title.orEmpty(),
+                    url = story.url,
+                    by = story.by.orEmpty(),
+                    time = story.time,
+                    score = story.score,
+                    descendants = story.descendants ?: 0
+                )
             )
-        } catch (e: Exception) {
-            Result.failure(e)
         }
     }
-    
-    suspend fun getUserComments(username: String, limit: Int = 20): Result<List<Comment>> {
-        return try {
-            val userResult = getUser(username)
-            userResult.fold(
-                onSuccess = { user ->
-                    val submissionIds = user.submitted?.take(limit * 2) ?: emptyList() // Get more to filter
-                    // Filter for comments (items that are not stories)
-                    val comments = mutableListOf<Comment>()
-                    submissionIds.forEach { id ->
-                        try {
-                            val response = api.getComment(id)
-                            if (response.isSuccessful) {
-                                response.body()?.let { comment ->
-                                    // Only add if it's actually a comment (has text and type is "comment")
-                                    if (comment.type == "comment" && !comment.text.isNullOrBlank()) {
-                                        comments.add(comment)
-                                        if (comments.size >= limit) return@forEach
-                                    }
-                                }
-                            }
-                        } catch (e: Exception) {
-                            // Skip failed comments
-                        }
-                    }
-                    Result.success(comments)
-                },
-                onFailure = { error ->
-                    Result.failure(error)
-                }
-            )
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
+
+    suspend fun removeBookmark(storyId: Long) = bookmarkDao.deleteBookmarkById(storyId)
+}
+
+private fun <T> Response<T>.bodyOrThrow(): T {
+    if (!isSuccessful) throw IllegalStateException("HTTP ${code()}")
+    return body() ?: throw IllegalStateException("Not found")
 }

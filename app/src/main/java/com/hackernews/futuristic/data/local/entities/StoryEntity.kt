@@ -22,21 +22,7 @@ data class StoryEntity(
     val descendants: Int?,
     val kids: List<Long>?,
     val type: String?,
-    val storyType: String, // TOP, NEW, BEST
-    val fetchedAt: Long = System.currentTimeMillis()
-)
-
-@Entity(tableName = "comments")
-@TypeConverters(Converters::class)
-data class CommentEntity(
-    @PrimaryKey
-    val id: Long,
-    val by: String?,
-    val time: Long,
-    val text: String?,
-    val kids: List<Long>?,
-    val parent: Long?,
-    val type: String?,
+    val storyType: String,
     val fetchedAt: Long = System.currentTimeMillis()
 )
 
@@ -81,25 +67,4 @@ fun Story.toEntity(storyType: String): StoryEntity = StoryEntity(
     kids = kids,
     type = type,
     storyType = storyType
-)
-
-fun CommentEntity.toDomainModel(): com.hackernews.futuristic.data.model.Comment = 
-    com.hackernews.futuristic.data.model.Comment(
-        id = id,
-        by = by,
-        time = time,
-        text = text,
-        kids = kids,
-        parent = parent,
-        type = type
-    )
-
-fun com.hackernews.futuristic.data.model.Comment.toEntity(): CommentEntity = CommentEntity(
-    id = id,
-    by = by,
-    time = time,
-    text = text,
-    kids = kids,
-    parent = parent,
-    type = type
 )
