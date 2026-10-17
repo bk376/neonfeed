@@ -38,6 +38,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -145,6 +146,9 @@ fun StoriesScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
+                        // The refresh indicator rests just above this box; clip it so it
+                        // only appears when pulled instead of covering the header.
+                        .clipToBounds()
                         .nestedScroll(pullToRefreshState.nestedScrollConnection)
                 ) {
                     LazyColumn(
